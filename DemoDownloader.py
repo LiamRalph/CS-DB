@@ -26,7 +26,6 @@ def main():
         demoLinks = getDemoLinks(alreadyDownloadedIDs)
         if demoLinks is not None:
             downloadDemos(demoLinks, alreadyDownloadedIDs)
-            DemoParser.main()
         time.sleep(300)
 
 
@@ -81,6 +80,7 @@ def downloadDemos(demoLinks, alreadyDownloadedIDs):
         i += 1
         alreadyDownloadedIDs.append(demo)
         matchCount+=1
+        DemoParser.main()
         print("Match "+str(matchCount)+'/'+str(length)+" Complete")
         end = time.time()
         print("Match Time: "+str(datetime.timedelta(seconds=(end - match_start))))
