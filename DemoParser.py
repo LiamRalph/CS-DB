@@ -34,7 +34,7 @@ def main():
         matches.append(row)
     cur.close()
 
-
+    
     matchCounter = 0
 
 
@@ -53,6 +53,7 @@ def main():
         if str(matchid)+'-'+str(mapCount)+".txt" not in alreadyParsed and str(matchid)+'-'+str(mapCount-1)+".txt" not in alreadyParsed and str(matchid)+'-'+str(mapCount-2)+".txt" not in alreadyParsed:
             matchCounter += 1
             demo_path = "./demos/"+str(demoid)+".rar" 
+
             if os.path.isfile(demo_path): 
                 patoolib.extract_archive(demo_path, outdir="./working_demos", verbosity=-1)
                 if(len(os.listdir("./working_demos")) == mapCount):

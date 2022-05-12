@@ -260,6 +260,65 @@ def main(mapID):
                             else:
                                 line["T"] = line["Winner"]
                                 line["CT"] = line["Loser"]
+
+
+                            
+                            CTstartMoney = 0
+                            TstartMoney = 0
+
+
+                            cur = conn.cursor()
+                            cur.execute("""SELECT COALESCE(CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R2.winneralive ELSE R2.loseralive END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R2.loseralive ELSE R2.winneralive END END, 0) from rounds R inner join maps M on M.mapid = R.mapid left join rounds R2 on R2.mapid = R.mapid and R2.round = R.round-1 where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                            CTstartAliveLast = cur.fetchone()[0]
+
+                            cur = conn.cursor()
+                            cur.execute("""SELECT COALESCE(CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R2.winneralive ELSE R2.loseralive END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R2.loseralive ELSE R2.winneralive END END, 0) from rounds R inner join maps M on M.mapid = R.mapid left join rounds R2 on R2.mapid = R.mapid and R2.round = R.round-1 where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                            TstartAliveLast = cur.fetchone()[0]
+
+
+                            cur = conn.cursor()
+                            cur.execute("""SELECT CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.winnerstreak ELSE R.loserstreak END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.loserstreak ELSE R.winnerstreak END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                            CTstartStreak = cur.fetchone()[0]
+
+                            cur = conn.cursor()
+                            cur.execute("""SELECT CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.winnerstreak ELSE R.loserstreak END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.loserstreak ELSE R.winnerstreak END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                            TstartStreak = cur.fetchone()[0]
+
+                            cur = conn.cursor()
+                            cur.execute("""SELECT CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.winnerscore-1 ELSE R.loserscore END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.loserscore ELSE R.winnerscore-1 END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                            CTstartScore = cur.fetchone()[0]
+
+                            cur = conn.cursor()
+                            cur.execute("""SELECT CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.winnerscore-1 ELSE R.loserscore END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.loserscore ELSE R.winnerscore-1 END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                            TstartScore = cur.fetchone()[0]
+
+                            cur = conn.cursor()
+                            cur.execute("""SELECT CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.winnermoney ELSE R.losermoney END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.losermoney ELSE R.winnermoney END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                            CTstartMoney += int(cur.fetchone()[0])
+
+                            cur = conn.cursor()
+                            cur.execute("""SELECT CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.winnermoney ELSE R.losermoney END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.losermoney ELSE R.winnermoney END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                            TstartMoney += int(cur.fetchone()[0])
+
+                            cur = conn.cursor()
+                            cur.execute("""SELECT mapname from maps where mapid = %s""", (line["mapid"],))
+                            mapname = cur.fetchone()[0]
+
+
+
+                            #"tick": int(line["Tick"]), "CTstartMoney": int(CTstartMoney), "TstartMoney": int(TstartMoney), "CTstartStreak": int(CTstartStreak), "TstartStreak": int(TstartStreak)
+                            MapValues = {"mapname": mapname, "Round": int(line["Round"]), "CTstartScore": CTstartScore, "TstartScore": TstartScore, "CTstartMoney": int(CTstartMoney), "TstartMoney": int(TstartMoney), "CTstartStreak": int(CTstartStreak), "TstartStreak": int(TstartStreak), "CTstartAliveLast": int(CTstartAliveLast), "TstartAliveLast": int(TstartAliveLast)}
+                            line["CTprobabilityMap"], err = predictMap(MapValues, gbrM)
+                            #line["CTprobabilityMap"] = 0.5
+                            line["TprobabilityMap"] = 1-line["CTprobabilityMap"]
+
+
+
+
+
+
+
+
                             columns = line.keys()
                             values = [line[column] for column in columns]
                             try:
@@ -340,65 +399,6 @@ def main(mapID):
                                 line["ProbabilityChange"] = 0
                         else:
                             line["ProbabilityChange"] = 0.5
-                            
-
-
-                        
-
-
-                        
-                        CTstartMoney = 0
-                        TstartMoney = 0
-
-
-                        cur = conn.cursor()
-                        cur.execute("""COALESCE(CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R2.winneralive ELSE R2.loseralive END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R2.loseralive ELSE R2.winneralive END END, 0) from rounds R inner join maps M on M.mapid = R.mapid left join rounds R2 on R2.mapid = R.mapid and R2.round = R.round-1 where mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        CTstartAliveLast = cur.fetchone()[0]
-
-                        cur = conn.cursor()
-                        cur.execute("""COALESCE(CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R2.winneralive ELSE R2.loseralive END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R2.loseralive ELSE R2.winneralive END END, 0) from rounds R inner join maps M on M.mapid = R.mapid left join rounds R2 on R2.mapid = R.mapid and R2.round = R.round-1 where mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        TstartAliveLast = cur.fetchone()[0]
-
-
-                        cur = conn.cursor()
-                        cur.execute("""SELECT CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.winnerstreak ELSE R.loserstreak END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.loserstreak ELSE R.winnerstreak END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        CTstartStreak = cur.fetchone()[0]
-
-                        cur = conn.cursor()
-                        cur.execute("""SELECT CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.winnerstreak ELSE R.loserstreak END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.loserstreak ELSE R.winnerstreak END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        TstartStreak = cur.fetchone()[0]
-
-                        cur = conn.cursor()
-                        cur.execute("""SELECT CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.winnerscore-1 ELSE R.loserscore END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.loserscore ELSE R.winnerscore-1 END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        CTstartScore = cur.fetchone()[0]
-
-                        cur = conn.cursor()
-                        cur.execute("""SELECT CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.winnerscore-1 ELSE R.loserscore END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.loserscore ELSE R.winnerscore-1 END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        TstartScore = cur.fetchone()[0]
-
-                        cur = conn.cursor()
-                        cur.execute("""SELECT CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.winnermoney ELSE R.losermoney END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.losermoney ELSE R.winnermoney END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        CTstartMoney += int(cur.fetchone()[0])
-
-                        cur = conn.cursor()
-                        cur.execute("""SELECT CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.winnermoney ELSE R.losermoney END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.losermoney ELSE R.winnermoney END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        TstartMoney += int(cur.fetchone()[0])
-
-                        cur = conn.cursor()
-                        cur.execute("""SELECT mapname from maps where mapid = %s""", (line["mapid"],))
-                        mapname = cur.fetchone()[0]
-
-
-
-                        #"tick": int(line["Tick"]), "CTstartMoney": int(CTstartMoney), "TstartMoney": int(TstartMoney), "CTstartStreak": int(CTstartStreak), "TstartStreak": int(TstartStreak)
-                        MapValues = {"mapname": mapname, "Round": int(line["Round"]), "CTstartScore": CTstartScore, "TstartScore": TstartScore, "CTstartMoney": int(CTstartMoney), "TstartMoney": int(TstartMoney), "CTstartStreak": int(CTstartStreak), "TstartStreak": int(TstartStreak), "CTstartAliveLast": int(CTstartAliveLast), "TstartAliveLast": int(TstartAliveLast)}
-                        #print(MapValues)
-                        line["CTprobabilityMap"], err = predictMap(MapValues, gbrM)
-                        #line["CTprobabilityMap"] = 0.5
-                        line["TprobabilityMap"] = 1-line["CTprobabilityMap"]
-                        
-                        
-                        
                         
                         columns = line.keys()
                         values = [line[column] for column in columns]
@@ -406,7 +406,6 @@ def main(mapID):
                         conn.commit()
                         prevRound = int(line["Round"])
                         prevProb = line["CTprobability"]
-                        prevProbMap = line["CTprobabilityMap"]
                         #prevHP = int(line["CThp"]) + int(line["Thp"])
                 except KeyError as e:
                     print(print(playersConvert))

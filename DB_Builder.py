@@ -323,7 +323,7 @@ def createDB():
             conn.close()
 def getQuery(queryString):
     #stars = int(input("Stars: "))
-    stars = 2
+    stars = 1
     #dateDelta = int(input("Months Back: "))
     dateDelta = 96
     Today = date.today()
@@ -337,10 +337,10 @@ def getQuery(queryString):
     
     Start = cur.fetchone() 
     if Start is not None:
-        Start = Start[0] - relativedelta(days=1)
+        Start = Start[0] - relativedelta(days=7)
         StartDate = Start.strftime("%Y-%m-%d")
     else:
-        StartDate = '2022-05-09'
+        StartDate = '2022-05-08'
     
     queryString += 'startDate='+StartDate+'&endDate='+TodayDate+'&content=demo&stars='+str(stars)
     return(queryString)
