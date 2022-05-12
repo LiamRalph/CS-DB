@@ -250,6 +250,8 @@ def createDB():
                         losermoney INT,
                         winnerstreak INT,
                         loserstreak INT,
+                        CTprobabilityMap float,
+                        TprobabilityMap float,
                         PRIMARY KEY (mapid, round),
                         CONSTRAINT maps_rounds_fk
                             FOREIGN KEY(mapid) 
@@ -282,9 +284,6 @@ def createDB():
                         CTprobability float,
                         Tprobability float,
                         ProbabilityChange float,
-                        CTprobabilityMap float,
-                        TprobabilityMap float,
-                        ProbabilityChangeMap float,
                         attacker INT,
                         victim INT,
                         damage INT,

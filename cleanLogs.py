@@ -11,6 +11,7 @@ from PredictorMaps import predictMap
 #Iterate through logs
 
 def main(mapID):
+    #mapID = '2356098-1.txt'
 
     gbrK = load('ExKillModelXGB')
     gbrR = load('ExRoundModelXGB')
@@ -22,7 +23,7 @@ def main(mapID):
 
     try:
         allLines = []
-
+        
         with open("./logs/Unclean/"+mapID) as log:
             error = False
             notLiveRound = False
@@ -342,33 +343,21 @@ def main(mapID):
                             
 
 
-                        cur = conn.cursor()
-                        cur.execute("""SELECT winnerstart from maps where mapid = %s
-                                    """, (line["mapid"],))
-                        winnerStart = cur.fetchone()
-
-                        cur = conn.cursor()
-                        cur.execute("""SELECT winnerid from maps where mapid = %s
-                                    """, (line["mapid"],))
-                        winnerID = cur.fetchone()
-
-                        cur = conn.cursor()
-                        cur.execute("""SELECT winner from rounds where mapid = %s and round = %s
-                                    """, (line["mapid"], line["Round"]))
-                        roundWinnerID = cur.fetchone()
                         
 
 
-                        if winnerStart == 'ct':
-                            if winnerID == line['CT']:
-                                CTstartProb = line["CTprobability"]
-                            else:
-                                CTstartProb = line["Tprobability"]
-                        else:
-                            if winnerID == line['T']:
-                                CTstartProb = line["CTprobability"]
-                            else:
-                                CTstartProb = line["Tprobability"]
+                        
+                        CTstartMoney = 0
+                        TstartMoney = 0
+
+
+                        cur = conn.cursor()
+                        cur.execute("""COALESCE(CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R2.winneralive ELSE R2.loseralive END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R2.loseralive ELSE R2.winneralive END END, 0) from rounds R inner join maps M on M.mapid = R.mapid left join rounds R2 on R2.mapid = R.mapid and R2.round = R.round-1 where mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                        CTstartAliveLast = cur.fetchone()[0]
+
+                        cur = conn.cursor()
+                        cur.execute("""COALESCE(CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R2.winneralive ELSE R2.loseralive END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R2.loseralive ELSE R2.winneralive END END, 0) from rounds R inner join maps M on M.mapid = R.mapid left join rounds R2 on R2.mapid = R.mapid and R2.round = R.round-1 where mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
+                        TstartAliveLast = cur.fetchone()[0]
 
 
                         cur = conn.cursor()
@@ -389,23 +378,24 @@ def main(mapID):
 
                         cur = conn.cursor()
                         cur.execute("""SELECT CASE WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.winnermoney ELSE R.losermoney END WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.losermoney ELSE R.winnermoney END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        CTstartMoney = cur.fetchone()[0]
+                        CTstartMoney += int(cur.fetchone()[0])
 
                         cur = conn.cursor()
                         cur.execute("""SELECT CASE WHEN M.winnerstart='t' THEN CASE WHEN R.winner=M.winnerid THEN R.winnermoney ELSE R.losermoney END WHEN M.winnerstart='ct' THEN CASE WHEN R.winner=M.winnerid THEN R.losermoney ELSE R.winnermoney END END from rounds R inner join maps M on M.mapid = R.mapid where R.mapid = %s and R.round = %s""", (line["mapid"], line["Round"]))
-                        TstartMoney = cur.fetchone()[0]
+                        TstartMoney += int(cur.fetchone()[0])
+
+                        cur = conn.cursor()
+                        cur.execute("""SELECT mapname from maps where mapid = %s""", (line["mapid"],))
+                        mapname = cur.fetchone()[0]
 
 
-                        MapValues = {"round": int(line["Round"]), "tick": int(line["Tick"]), "CTstartProb": CTstartProb, "CTstartStreak": int(CTstartStreak), "TstartStreak": int(TstartStreak),"CTstartScore": int(CTstartScore), "TstartScore": int(TstartScore),"CTstartMoney": int(CTstartMoney), "TstartMoney": int(TstartMoney)}
 
+                        #"tick": int(line["Tick"]), "CTstartMoney": int(CTstartMoney), "TstartMoney": int(TstartMoney), "CTstartStreak": int(CTstartStreak), "TstartStreak": int(TstartStreak)
+                        MapValues = {"mapname": mapname, "Round": int(line["Round"]), "CTstartScore": CTstartScore, "TstartScore": TstartScore, "CTstartMoney": int(CTstartMoney), "TstartMoney": int(TstartMoney), "CTstartStreak": int(CTstartStreak), "TstartStreak": int(TstartStreak), "CTstartAliveLast": int(CTstartAliveLast), "TstartAliveLast": int(TstartAliveLast)}
+                        #print(MapValues)
                         line["CTprobabilityMap"], err = predictMap(MapValues, gbrM)
                         #line["CTprobabilityMap"] = 0.5
                         line["TprobabilityMap"] = 1-line["CTprobabilityMap"]
-
-                        if line["Attacker"] != -1 and line["Victim"] != -1:
-                                line["ProbabilityChangeMap"] = prevProbMap - line["CTprobabilityMap"]
-                        else:
-                            line["ProbabilityChangeMap"] = 0
                         
                         
                         
@@ -435,7 +425,8 @@ def main(mapID):
                     print(mapID)
                     conn.rollback()
                     pass
-                except TypeError:
+                except TypeError as e:
+                        print(e)
                         print(mapID)
                         print(line)
                         pass
@@ -541,4 +532,5 @@ def main(mapID):
         print(mapID)       
         conn.rollback()            
 
-
+if __name__ == "__main__":
+    main()

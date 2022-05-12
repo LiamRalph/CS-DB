@@ -181,5 +181,5 @@ cython_debug/
 # Go workspace file
 go.work
 
-.txt
-.rar
+*.txt
+*.rar

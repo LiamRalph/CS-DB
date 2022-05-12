@@ -26,7 +26,6 @@ def main():
     cur.execute("""
                 SELECT demoid, Match.matchid, count(Map) as mapCount from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
-                where Match.date >= '2019-01-01'::date
                 GROUP BY demoid, Match.matchid
                 ORDER BY demoid DESC """
                 )  
@@ -106,6 +105,7 @@ def main():
                             mapNo += 1
     print(str(matchCounter) + " Matches Parsed", end='\r')
                         
-
+if __name__ == "__main__":
+    main()
     
     
