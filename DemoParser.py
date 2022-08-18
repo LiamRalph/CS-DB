@@ -24,8 +24,9 @@ def main():
     conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
     cur = conn.cursor()
     cur.execute("""
-                SELECT demoid, Match.matchid, count(Map) as mapCount from matches Match
+                SELECT demoid, Match.matchid, count(Map) as mapCount, case when Match.date > '2022-05-08'::date then 1 else 0 end from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
+                where Match.date > '2022-05-08'::date
                 GROUP BY demoid, Match.matchid
                 ORDER BY demoid DESC """
                 )  
@@ -46,10 +47,12 @@ def main():
     for match in matches:
         for file in os.listdir("./working_demos/"):
             os.remove("./working_demos/"+file)
+
         demoid =  match[0]
         matchid = match[1]
         mapCount =  match[2]
-        
+        date = match[3]
+
         if str(matchid)+'-'+str(mapCount)+".txt" not in alreadyParsed and str(matchid)+'-'+str(mapCount-1)+".txt" not in alreadyParsed and str(matchid)+'-'+str(mapCount-2)+".txt" not in alreadyParsed:
             matchCounter += 1
             demo_path = "./demos/"+str(demoid)+".rar" 
@@ -57,6 +60,7 @@ def main():
             if os.path.isfile(demo_path): 
                 patoolib.extract_archive(demo_path, outdir="./working_demos", verbosity=-1)
                 if(len(os.listdir("./working_demos")) == mapCount):
+
                     demoNames = os.listdir("./working_demos")
                     path = './working_demos/'
                     demoPaths = [os.path.join(path,i) for i in demoNames]
@@ -78,10 +82,24 @@ def main():
                             demoPaths = copy
                     mapNo = 1
                     for demo in demoPaths:
-                        command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)
-                        os.system(command)
-                        os.remove(demo)
-                        cleanLogs.main(str(matchid)+'-'+str(mapNo)+'.txt')
+                        cur = conn.cursor()
+                        cur.execute("""SELECT winnerrounds+loserrounds from maps where mapid = %s""", (str(matchid)+'-'+str(mapNo),))
+                        rounds = cur.fetchone()[0]
+
+                        cur.execute("""SELECT * from roundstates where mapid = %s and round = 1 and tick = 0""", (str(matchid)+'-'+str(mapNo),))
+                        rsOne = cur.fetchone()
+
+                        if rsOne is None:
+                            if date == 1:
+                                command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 1" + " -roundsTotal " + str(rounds) 
+                            
+                            else:
+                                command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 0" + " -roundsTotal " + str(rounds) 
+                            
+                        
+                            os.system(command)
+                            os.remove(demo)
+                            cleanLogs.main("./logs/Unclean/", str(matchid)+'-'+str(mapNo)+'.txt')
                         mapNo += 1
                 else:
                     demoNames = os.listdir("./working_demos")
@@ -91,20 +109,28 @@ def main():
                     mapNo = 1
                     for demo in demoPaths:
                         part = False
+                        cur = conn.cursor()
+                        print(str(matchid)+'-'+str(mapNo))
+                        cur.execute("""SELECT winnerrounds+loserrounds from maps where mapid = %s""", (str(matchid)+'-'+str(mapNo),))
+                        rounds = cur.fetchone()[0]
                         if '-p1.dem' in demo:
                             fileName = str(matchid)+'-'+str(mapNo)+'.1'
                             part = True
                         elif '-p2.dem' in demo:
                             fileName = str(matchid)+'-'+str(mapNo)+'.2'
                             part = False
+                        elif '-p3.dem' in demo:
+                            fileName = str(matchid)+'-'+str(mapNo)+'.3'
+                            part = False
                         else:
                             fileName = str(matchid)+'-'+str(mapNo)
-                        command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + fileName
+                        if date == 1:
+                            command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + fileName+ " -rs 1" + " -roundsTotal " + str(rounds) 
                         os.system(command)
                         os.remove(demo)
                         if not part:
                             mapNo += 1
-    print(str(matchCounter) + " Matches Parsed", end='\r')
+    print(str(matchCounter) + " Matches Parsed. ", end='\r')
                         
 if __name__ == "__main__":
     main()

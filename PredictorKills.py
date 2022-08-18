@@ -13,14 +13,14 @@ import psycopg2
 def predictKill(KillValues, gbr):
 
     IP = '192.168.1.3'
-    
+    IP = 'csgo.cqtpbfnejnsi.us-east-2.rds.amazonaws.com'
     mapid = KillValues['mapid']
     round = int(KillValues['round'])
     tick = int(KillValues['tick'])
     death = int(KillValues['death'])
     killer = int(KillValues['kill'])
     
-    conn = psycopg2.connect("dbname=CSGO user=postgres password=1545" + " host='" + IP + "'")
+    conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
     cur = conn.cursor()
     cur.execute("""
         SELECT CASE WHEN ((%s = R.winner and R.winnerside = 'T') or (%s = R.loser and R.winnerside = 'CT')) THEN 1 ELSE 0 END from rounds R

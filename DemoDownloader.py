@@ -21,11 +21,13 @@ def main():
 
 
     while True:
+        DemoParser.main()
         getAlreadyDownloaded(alreadyDownloadedIDs)
 
         demoLinks = getDemoLinks(alreadyDownloadedIDs)
         if demoLinks is not None:
             downloadDemos(demoLinks, alreadyDownloadedIDs)
+        DemoParser.main()
         time.sleep(300)
 
 
@@ -35,17 +37,17 @@ def getAlreadyDownloaded(alreadyDownloadedIDs):
 
 def getDemoLinks(alreadyDownloadedIDs):
     sql = """
-            SELECT demoid from matches
+            SELECT demoid from matches where date > '2022-05-08'::date
         """
     conn = None
     try:
         conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
         cur = conn.cursor()
         cur.execute(sql)
-        mtches = cur.fetchall()
+        matches = cur.fetchall()
         demoLinks = []
-        if mtches is not None:
-            demoLinks = [int(match[0]) for match in mtches if int(match[0]) not in alreadyDownloadedIDs]
+        if matches is not None:
+            demoLinks = [int(match[0]) for match in matches if int(match[0]) not in alreadyDownloadedIDs]
         cur.close()
         return(demoLinks)
     except (Exception, psycopg2.DatabaseError) as error:
