@@ -374,12 +374,17 @@ def main(path, mapID):
                             prevWinner = int(line["Winner"])
                             columns = line.keys()
                             values = [line[column] for column in columns]
-                            try:
-                                cur.execute("insert into rounds (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values))) 
-                                conn.commit()
-                            except (psycopg2.errors.ForeignKeyViolation, psycopg2.errors.InFailedSqlTransaction):
-                                conn.rollback()
-                                continue
+                            while True:
+                                try:
+                                    cur.execute("insert into rounds (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values))) 
+                                    conn.commit()
+                                    break
+                                except (psycopg2.errors.ForeignKeyViolation, psycopg2.errors.InFailedSqlTransaction):
+                                    conn.rollback()
+                                    continue
+                                except psycopg2.OperationalError:
+                                    time.sleep(60)
+                                    print("Internet Timeout")
                                 
                 except KeyError as e:
                     conn.rollback()
@@ -481,16 +486,24 @@ def main(path, mapID):
                                     print("No winner side")
                                     print(line)
                                     continue
-                                if winnerside == "ct":
-                                    line["ProbabilityChange"] = abs(1-line["CTprobability"]) 
+                                if winnerside == "CT":
+                                    line["ProbabilityChange"] = line["Tprobability"]
                                 else:
-                                    line["ProbabilityChange"] = abs(line["CTprobability"])
+                                    line["ProbabilityChange"] = line["CTprobability"]
                                 
                             
                             columns = line.keys()
                             values = [line[column] for column in columns]
-                            cur.execute("insert into roundstates (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values))) 
-                            conn.commit()
+                            while True:
+                                try:
+                                    cur.execute("insert into roundstates (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values))) 
+                                    conn.commit()
+                                    break
+                                except psycopg2.OperationalError:
+                                    time.sleep(60)
+                                    print("Internet Timeout")
+                                    conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+                                    cur = conn.cursor()
                             prevRound = int(line["Round"])
                             prevProb = line["CTprobability"]
                             #prevHP = int(line["CThp"]) + int(line["Thp"])
@@ -580,8 +593,14 @@ def main(path, mapID):
 
                             columns = line.keys()
                             values = [line[column] for column in columns]
-                            cur.execute("insert into saves (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values)))
-                            conn.commit()
+                            while True:
+                                try:
+                                    cur.execute("insert into saves (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values)))
+                                    conn.commit()
+                                    break
+                                except psycopg2.OperationalError:
+                                    time.sleep(60)
+                                    print("Internet Timeout")
                 except KeyError as e:
                     conn.rollback()
                     print(e)

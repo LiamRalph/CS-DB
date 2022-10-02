@@ -24,7 +24,7 @@ def main():
     conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
     cur = conn.cursor()
     cur.execute("""
-                SELECT demoid, Match.matchid, count(Map) as mapCount, case when Match.date > '2022-05-08'::date then 1 else 0 end from matches Match
+                SELECT demoid, Match.matchid, count(Map) as mapCount, case when Match.date > '2022-07-01'::date then 1 else 0 end from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
                 where Match.date > '2022-05-08'::date
                 GROUP BY demoid, Match.matchid
