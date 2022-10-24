@@ -1,4 +1,4 @@
-import requests, time, os, csv, psycopg2, psycopg2.extras
+import requests, time, os, csv, psycopg2, psycopg2.extras, connectDB
 from bs4 import BeautifulSoup
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
@@ -12,8 +12,7 @@ def main():
     players = []
     teams = []
     #subnet = '1.3'
-    subnet = '86.113'
-    IP = 'csgo.cqtpbfnejnsi.us-east-2.rds.amazonaws.com'
+
 
     OriginalURL = "https://www.hltv.org"
     header = ["MatchLink", "MatchID", "DemoLink", "DemoID", "TeamNames", "TeamIDs", "PlayerNames", 'team1', 'team2', 'team1rank', 'team2rank', "PlayerIDs", "Sides", "MapScores", "HalfScore", "MapNames", "Winner", "Loser", "Time", "Date", "UNIX", "TournamentName", "TournamentID", "Maps", "POTM" ]
@@ -50,7 +49,7 @@ def main():
     
     
 def tableExists(tableName):
-    conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+    conn = connectDB.database_credentials()
     cur = conn.cursor()
     cur.execute("SELECT * from information_schema.tables where table_name=%s", (tableName,))
     return bool(cur.rowcount)
@@ -82,7 +81,7 @@ def createDB():
     conn = None
     try:
         # connect to the PostgreSQL server
-        conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+        conn = connectDB.database_credentials()
         cur = conn.cursor()
         if not tableExists('matches'):
             cur.execute(command)
@@ -339,23 +338,29 @@ def getQuery(queryString):
     Today = date.today()
     TodayDate = Today.strftime("%Y-%m-%d")
 
-    conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+    conn = connectDB.database_credentials()
     cur = conn.cursor()
     cur.execute("""select date from matches
                     order by date DESC
                     Limit 1""")
     
     Start = cur.fetchone() 
-    if Start[0] >= date(2022,5,8):
-        stars = 1
+    if Start != None:
+        if Start[0] >= date(2022,5,8):
+            stars = 1
+        else:
+            stars = 2
+        StartDate = Start[0].strftime("%Y-%m-%d")
+        #StartDate = '2022-05-08' 
+        queryString += 'startDate='+StartDate+'&endDate='+TodayDate+'&content=demo&stars='+str(stars)
     else:
         stars = 2
+        queryString += 'startDate=2014-01-01'+'&endDate='+TodayDate+'&content=demo&stars='+str(stars)
 
-    StartDate = Start[0].strftime("%Y-%m-%d")
-    queryString += 'startDate='+StartDate+'&endDate='+TodayDate+'&content=demo&stars='+str(stars)
+    
     return(queryString)
 def getAlreadySaved():
-    conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+    conn = connectDB.database_credentials()
     cur = conn.cursor()
     cur.execute("SELECT matchlink from matches")
     savedMatchLinks = [r[0] for r in cur.fetchall()]
@@ -392,7 +397,7 @@ def getMatchInfo(matchInfoDict, match):
             if(a['href'].startswith('/download/')):
                 matchInfoDict["DemoLink"] = OriginalURL + a['href']
                 matchInfoDict["DemoID"] = a['href'].split("/")[3]      
-
+    #print(matchInfoDict["MatchLink"])
     maps =  matchSoup.find_all('div', class_='map-name-holder')
     scores =  matchSoup.find_all('div', class_='results-team-score')
     sides = matchSoup.find_all('div', class_='results-center-half-score')
@@ -556,7 +561,7 @@ def addToDB(matchInfoDict):
     sql = "INSERT into matches (%s) values %s  ON CONFLICT DO NOTHING RETURNING MatchID"
     conn = None
     try:
-        conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+        conn = connectDB.database_credentials()
         # create a new cursor
         cur = conn.cursor()
         # execute the INSERT statement
@@ -604,7 +609,7 @@ def addPlayer(Player):
         """
     conn = None
     try:
-        conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+        conn = connectDB.database_credentials()
         cur = conn.cursor()
         cur.execute(sql, (Player[0], Player[1]))
         conn.commit()
@@ -621,7 +626,7 @@ def addTeam(Team):
         """
     conn = None
     try:
-        conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+        conn = connectDB.database_credentials()
         cur = conn.cursor()
         cur.execute(sql, (Team[0], Team[1]))
         conn.commit()

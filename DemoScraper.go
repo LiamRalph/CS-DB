@@ -83,6 +83,7 @@ func main() {
 	})
 
 	var roundStartTick int = 0
+	var footstepCount int = 0
 	var BombPlanted bool = false
 	var BombDefused bool = false
 	var TimePlanted int = 0
@@ -250,7 +251,13 @@ func main() {
 	p.RegisterEventHandler(func(e events.Footstep) {
 		gs := p.GameState()
 		if rs == "1" {
-			WinProb(gs, roundStartTick, BombPlanted, TimePlanted, outputFile, site, BombDefused, END_ROUND, siteA, siteB, "None", "None", 0, rs)
+			if footstepCount == 15 {
+				WinProb(gs, roundStartTick, BombPlanted, TimePlanted, outputFile, site, BombDefused, END_ROUND, siteA, siteB, "None", "None", 0, rs)
+				footstepCount = 0
+			} else {
+				footstepCount += 1
+			}
+
 		}
 
 	})
@@ -325,7 +332,6 @@ func main() {
 			case common.TeamTerrorists:
 
 				if RZN != 1 && RZN != 7 && RZN != 12 {
-					ctAlive -= 1
 					if ctAlive == 0 {
 						ctValueEnd = 0
 					}
@@ -341,7 +347,6 @@ func main() {
 			case common.TeamCounterTerrorists:
 
 				if RZN != 1 && RZN != 7 && RZN != 12 {
-					tAlive -= 1
 					if tAlive == 0 {
 						tValueEnd = 0
 					}

@@ -5,7 +5,7 @@ from joblib import dump, load
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.inspection import permutation_importance
-import warnings
+import warnings, connectDB
 warnings.filterwarnings('ignore', category=FutureWarning)
 from scipy.special import softmax
 from OneHotKills import OHE
@@ -21,7 +21,7 @@ def predictKill(KillValues, gbr):
     killer = int(KillValues['kill'])
     while True:
         try:
-            conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+            conn = connectDB.database_credentials()
             cur = conn.cursor()
             cur.execute("""
                 SELECT CASE WHEN ((%s = R.winner and R.winnerside = 'T') or (%s = R.loser and R.winnerside = 'CT')) THEN 1 ELSE 0 END from rounds R

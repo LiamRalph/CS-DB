@@ -1,4 +1,4 @@
-import requests
+import requests, connectDB
 import os
 import patoolib
 import time
@@ -14,21 +14,24 @@ import cleanLogs
 def main():
     #Init Variables
 
-
-    #subnet = '1.3'
-    subnet = '86.113'
-    IP = 'csgo.cqtpbfnejnsi.us-east-2.rds.amazonaws.com'
-
-
-
-    conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+    errors = []
+    for file in os.listdir("./logs/Cleaned/Error/Kill"):
+        errors.append(file.replace('.txt', ''))
+    for file in os.listdir("./logs/Cleaned/Error/Round"):
+        if file.replace('.txt', '') not in errors:
+            errors.append(file.replace('.txt', ''))
+    for file in os.listdir("./logs/Cleaned/Error/WinProb"):
+        if file.replace('.txt', '') not in errors:
+            errors.append(file.replace('.txt', ''))
+    
+    conn = connectDB.database_credentials()
     cur = conn.cursor()
     cur.execute("""
-                SELECT demoid, Match.matchid, count(Map) as mapCount, case when Match.date > '2022-05-08'::date then 1 else 0 end from matches Match
+                SELECT demoid, Match.matchid, count(Map) as mapCount, case when Match.date > '2014-01-01'::date then 1 else 0 end from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
-                where Match.date < '2022-05-08'::date
+                where Match.date < '2021-01-01'::date
                 GROUP BY demoid, Match.matchid
-                ORDER BY demoid DESC """
+                ORDER BY date DESC """
                 )  
     matches = []
     for row in cur:
@@ -39,31 +42,52 @@ def main():
     matchCounter = 0
 
 
-    parsedParts = [x.split('.', 1)[0]+'.txt' for x in os.listdir('./logs/Unclean/Parts')]
-    alreadyParsed = os.listdir('./logs/Unclean') + parsedParts
-
+    parsedParts = [x.split('.', 1)[0].replace('.txt', '') for x in os.listdir('./logs/Unclean/Parts')]
     
 
+    cur = conn.cursor()
+    cur.execute("""
+                select distinct m.mapid from matches ma 
+                inner join maps M on M.matchid = Ma.matchid
+                inner join roundstates RS on RS.mapid = M.mapid
+				inner join kills K on K.mapid = RS.mapid and K.round = RS.round
+				
+                where rs.round = 1 and RS.tick = 0
+				group by m.mapid having count(K.*) > 0
+                """
+                )  
+    alreadyParsed = []
+    for row in cur:
+        alreadyParsed.append(row[0])
+    cur.close()
+
+    alreadyParsed = alreadyParsed + parsedParts + errors
+  
     for match in matches:
-
-        
-
-
-
         for file in os.listdir("./working_demos_old/"):
             os.remove("./working_demos_old/"+file)
+
         demoid =  match[0]
         matchid = match[1]
         mapCount =  match[2]
         date = match[3]
 
-        if str(matchid)+'-'+str(mapCount)+".txt" not in alreadyParsed and str(matchid)+'-'+str(mapCount-1)+".txt" not in alreadyParsed and str(matchid)+'-'+str(mapCount-2)+".txt" not in alreadyParsed:
+        parse = False
+        for i in range(mapCount):
+            if str(matchid)+'-'+str(i+1) not in alreadyParsed:
+                parse = True
+
+
+        if parse:
             matchCounter += 1
             demo_path = "./demos/"+str(demoid)+".rar" 
 
             if os.path.isfile(demo_path): 
-
-                patoolib.extract_archive(demo_path, outdir="./working_demos_old", verbosity=-1)
+                try:
+                    patoolib.extract_archive(demo_path, outdir="./working_demos_old", verbosity=-1)
+                except patoolib.util.PatoolError:
+                    print(demoid + " extract error")
+                    continue
                 if(len(os.listdir("./working_demos_old")) == mapCount):
 
                     demoNames = os.listdir("./working_demos_old")
@@ -91,45 +115,56 @@ def main():
                         cur.execute("""SELECT winnerrounds+loserrounds from maps where mapid = %s""", (str(matchid)+'-'+str(mapNo),))
                         rounds = cur.fetchone()[0]
 
-
-                        if date == 1:
-                            command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 1" + " -roundsTotal " + str(rounds) 
-                        
-                        else:
-                            command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 0" + " -roundsTotal " + str(rounds) 
+                        cur.execute("""SELECT * from roundstates where mapid = %s and round = 1 and tick = 0""", (str(matchid)+'-'+str(mapNo),))
+                        rsOne = cur.fetchone()
+                        if rsOne is None:
+                            if date == 1:
+                                command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 1" + " -roundsTotal " + str(rounds) 
                             
-                        
-                        os.system(command)
-                        os.remove(demo)
-                        cleanLogs.main("./logs/Unclean/", str(matchid)+'-'+str(mapNo)+'.txt')
+                            else:
+                                command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 0" + " -roundsTotal " + str(rounds) 
+
+                            os.system(command)
+                            os.remove(demo)
+                            cleanLogs.main("./logs/Unclean/", str(matchid)+'-'+str(mapNo)+'.txt')
                         mapNo += 1
                 else:
+                    #print(str(matchid) + ' has maps in Parts')
                     demoNames = os.listdir("./working_demos_old")
                     path = './working_demos_old/'
                     demoPaths = [os.path.join(path,i) for i in demoNames]
-                    demoPaths = sorted(demoPaths , key=os.path.getmtime)
-                    mapNo = 1
+                    demoPaths = sorted(demoPaths , key=os.path.getctime)
+                    mapNo = 0
                     for demo in demoPaths:
-                        part = False
                         if '-p1.dem' in demo:
+                            mapNo += 1
                             fileName = str(matchid)+'-'+str(mapNo)+'.1'
-                            part = True
+                            print(str(matchid)+'-'+str(mapNo) + ' is in Parts')
                         elif '-p2.dem' in demo:
+                            if mapNo == 0:
+                                mapNo += 1
                             fileName = str(matchid)+'-'+str(mapNo)+'.2'
-                            part = False
+                        elif '-p3.dem' in demo:
+                            if mapNo == 0:
+                                mapNo += 1
+                            fileName = str(matchid)+'-'+str(mapNo)+'.3'
                         else:
+                            mapNo += 1
                             fileName = str(matchid)+'-'+str(mapNo)
                         if date == 1:
-                            command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 1" + " -roundsTotal " + str(rounds) 
-                        else:
-                            command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 0" + " -roundsTotal " + str(rounds) 
+                            try:
+                                cur = conn.cursor()
+                                cur.execute("""SELECT winnerrounds+loserrounds from maps where mapid = %s""", (str(matchid)+'-'+str(mapNo),))
+                                rounds = cur.fetchone()[0]
+                                command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + fileName+ " -rs 1" + " -roundsTotal " + str(rounds) 
+                            except:
+                                print("Non standard demo parts")
+                                continue
                         os.system(command)
                         os.remove(demo)
-                        if not part:
-                            mapNo += 1
+                        
     print(str(matchCounter) + " Matches Parsed. ", end='\r')
                         
 if __name__ == "__main__":
     main()
-    
     

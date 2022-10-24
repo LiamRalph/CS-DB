@@ -6,6 +6,7 @@ import time
 import Levenshtein
 import psycopg2
 import traceback
+import connectDB
 from joblib import dump, load
 from PredictorKills import predictKill
 from PredictorRounds import predictRound
@@ -95,7 +96,7 @@ def main(path, mapID):
 
                 #elif str(line).startswith('Match: Game State Changed'):
 
-            conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+            conn = connectDB.database_credentials()
             cur = conn.cursor()
             cur.execute("""SELECT Team.name as name, Team.teamid as id
                                 FROM teams Team
@@ -117,7 +118,7 @@ def main(path, mapID):
             team1log = team1logOG = json.loads(headers[0], strict=False)["Team"].lower()
             team2log = team2logOG = json.loads(headers[1], strict=False)["Team"].lower()
 
-            excessWordsTeams = ["esports", " esports", "parimatch", "gg.bet", "luk0il", ".", ".1xbet", "[not ready]", "[not ready] ", "[ready]", " gaming", "[READY] "]
+            excessWordsTeams = ["esports", " esports", "parimatch", "gg.bet", "luk0il", ".", ".1xbet", "[not ready]", "[not ready] ", "[ready]", " gaming", "[READY] ", " Sportsbet", "Team "]
             excessWordsPlayers = ["NTC","Imp_", "North.", ".Parimatch", "_LigaStavok", "BIG ", "forZe-", "_x_","* HyperX","* twitch.tv","* EGB.com","* Hellcase.com","*66esports", "LG * ", "Virtus.pro G2A ", "luk0il", " x LUKOIL", "parimatch", " GG.BET", "*LBETç«žæŠ€", "-", "* Parimatch", "(1)", "^.^", "_ligastavok", " x parimatch", "flames*", "Flames*", "mrs - ", "big", "avangar", "cr4zy", "AVANGAR|", "G2|", "ENVYUS ", "-iwnl-", "Cloud9", "[C]", "[D]", "CLG ", "CLG", "Heroic", "mouz|", " Betway", "HEET"]
             for word in excessWordsTeams:
                 if word.lower() in team1log.lower():
@@ -125,10 +126,7 @@ def main(path, mapID):
                 if word.lower() in  team2log.lower():
                     team2log = team2log.lower().replace(word.lower(), "")
 
-            if team1log == "ninjas in pyjamas" or team1log == "Ninjas In Pyjamas":
-                team1log = "nip"
-            if team2log == "ninjas in pyjamas" or team2log == "Ninjas In Pyjamas":
-                team2log = "nip"
+
 
             if team1log == "vp":
                 team1log = "virtus pro"
@@ -377,7 +375,6 @@ def main(path, mapID):
                             while True:
                                 try:
                                     cur.execute("insert into rounds (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values))) 
-                                    conn.commit()
                                     break
                                 except (psycopg2.errors.ForeignKeyViolation, psycopg2.errors.InFailedSqlTransaction):
                                     conn.rollback()
@@ -385,8 +382,10 @@ def main(path, mapID):
                                 except psycopg2.OperationalError:
                                     time.sleep(60)
                                     print("Internet Timeout")
+                    conn.commit()
                                 
                 except KeyError as e:
+                    print("KeyError")
                     conn.rollback()
                     print(e)
                     print(mapID + 'Round Error')
@@ -401,137 +400,136 @@ def main(path, mapID):
                             txtFile.write(json.dumps(line) + "\n")
                     return
                 except ValueError as e:
+                    print("ValueError")
                     print(e)
                     print(mapID)
                     print(MapValues)
                     traceback.print_exc()
 
-            cur = conn.cursor()
-            cur.execute("""SELECT case when Match.date > '2022-05-08'::date then 1 else 0 end
-                                FROM matches Match
-                                    WHERE Match.matchid = %s 
-                                    
-                        """, (mapID[:-6],))
-            date = int(cur.fetchone()[0])
 
-            if date == 1:
-                file = './logs/Cleaned/WinProb/'+mapID
+            file = './logs/Cleaned/WinProb/'+mapID
 
-                with open(file, 'w+') as txtFile:
-                    txtFile.write(headers[0])
-                    txtFile.write(headers[1])
-                    try:
-                        prevRound = 1
-                        prevProb = 0.5
-                        prevProbMap = 0.5
-                        #prevHP = 1000
-                        roundProbOutput = roundProbOutput[1:]
-                        for line in roundProbOutput:
-                            if int(line["Round"]) == 0:
-                                continue
-                            del line["BombPlanted"]
-                            
-                            line["mapid"] = mapID[:-4]
-                            txtFile.write(json.dumps(line) + "\n")
-                            line["CT"] = teamsConvert[line["CT"].lower()]
-                            line["T"] = teamsConvert[line["T"].lower()]
-                            A = False
-                            B = False
-                            planted = False
-                            if line["PlantSite"] == 'A':
-                                A = True
-                                planted = True
-                            if line["PlantSite"] == 'B':
-                                B = True
-                                planted = True
-                            if line["Attacker"] != "None":
-                                line["Attacker"] = playersConvert[line["Attacker"]]
+            with open(file, 'w+') as txtFile:
+                txtFile.write(headers[0])
+                txtFile.write(headers[1])
+                try:
+                    prevRound = 1
+                    prevProb = 0.5
+                    prevProbMap = 0.5
+                    #prevHP = 1000
+                    winnerside = ''
+                    roundProbOutput = roundProbOutput[1:]
+                    for line in roundProbOutput:
+                        if int(line["Round"]) == 0:
+                            continue
+                        del line["BombPlanted"]
+                        
+                        line["mapid"] = mapID[:-4]
+                        txtFile.write(json.dumps(line) + "\n")
+                        line["CT"] = teamsConvert[line["CT"].lower()]
+                        line["T"] = teamsConvert[line["T"].lower()]
+                        A = False
+                        B = False
+                        planted = False
+                        if line["PlantSite"] == 'A':
+                            A = True
+                            planted = True
+                        if line["PlantSite"] == 'B':
+                            B = True
+                            planted = True
+                        if line["Attacker"] != "None":
+                            line["Attacker"] = playersConvert[line["Attacker"]]
+                        else:
+                            line["Attacker"] = -1
+                        if line["Victim"] != "None":
+                            line["Victim"] = playersConvert[line["Victim"]]
+                        else:
+                            line["Victim"] = -1
+                        
+
+                        
+                        RoundValues = {"tick": int(line["Tick"]), "ctalive": int(line["CTalive"]), "talive": int(line["Talive"]), "ctdista": float(line["CTdistA"]),"tdista": float(line["TdistA"]),"ctdistb": float(line["CTdistB"]),"tdistb": float(line["TdistB"]), "ctvalue": int(line["CTvalue"]), "tvalue": int(line["Tvalue"]), "cthp": int(line["CThp"]), "thp": int(line["Thp"]), "planteda": A, "plantedb": B, "bombplanted": planted, "timesinceplant": int(line["TimeSincePlant"])}
+                        line["CTprobability"], err = predictRound(RoundValues, gbrR)
+
+                        line["Tprobability"] = 1-line["CTprobability"]
+
+                        # if line["Attacker"] != -1 and line["Victim"] != -1:
+                        #     print(prevRound)
+                        #     print(int(line["Round"]))
+                        #     print(line["Attacker"])
+                        #     print(line["Victim"])
+                        #     print(line["CTprobability"])
+                        #     print(prevProb)
+                        #     print(prevProb - line["CTprobability"])
+                        #     print('------------------------------')
+                        if prevRound == int(line["Round"]):
+                            if line["Attacker"] != -1 and line["Victim"] != -1:
+                                    line["ProbabilityChange"] = abs(prevProb - line["CTprobability"] )
                             else:
-                                line["Attacker"] = -1
-                            if line["Victim"] != "None":
-                                line["Victim"] = playersConvert[line["Victim"]]
-                            else:
-                                line["Victim"] = -1
-                            
-
-                            
-                            RoundValues = {"tick": int(line["Tick"]), "ctalive": int(line["CTalive"]), "talive": int(line["Talive"]), "ctdista": float(line["CTdistA"]),"tdista": float(line["TdistA"]),"ctdistb": float(line["CTdistB"]),"tdistb": float(line["TdistB"]), "ctvalue": int(line["CTvalue"]), "tvalue": int(line["Tvalue"]), "cthp": int(line["CThp"]), "thp": int(line["Thp"]), "planteda": A, "plantedb": B, "bombplanted": planted, "timesinceplant": int(line["TimeSincePlant"])}
-                            line["CTprobability"], err = predictRound(RoundValues, gbrR)
-
-                            line["Tprobability"] = 1-line["CTprobability"]
-
-                            # if line["Attacker"] != -1 and line["Victim"] != -1:
-                            #     print(prevRound)
-                            #     print(int(line["Round"]))
-                            #     print(line["Attacker"])
-                            #     print(line["Victim"])
-                            #     print(line["CTprobability"])
-                            #     print(prevProb)
-                            #     print(prevProb - line["CTprobability"])
-                            #     print('------------------------------')
-                            if prevRound == int(line["Round"]):
-                                if line["Attacker"] != -1 and line["Victim"] != -1:
-                                        line["ProbabilityChange"] = abs(prevProb - line["CTprobability"] )
-                                else:
-                                    line["ProbabilityChange"] = 0
-                            else:
+                                line["ProbabilityChange"] = 0
+                        else:
+                            if prevRound != int(line["Round"]):
                                 cur = conn.cursor()
                                 cur.execute("""SELECT winnerside from rounds where mapid = %s and round = %s""", (line["mapid"],line["Round"]))
                                 winnerside = cur.fetchone()
-                                if winnerside is not None:
-                                    winnerside = winnerside[0]
-                                elif int(line["Round"]) == 0:
-                                    continue
-                                else:
-                                    print("No winner side")
-                                    print(line)
-                                    continue
-                                if winnerside == "CT":
-                                    line["ProbabilityChange"] = line["Tprobability"]
-                                else:
-                                    line["ProbabilityChange"] = line["CTprobability"]
-                                
+                            if winnerside is not None:
+                                winnerside = winnerside[0]
+                            elif int(line["Round"]) == 0:
+                                continue
+                            else:
+                                # print("No winner side")
+                                # print(line)
+                                continue
+                            if winnerside == "CT":
+                                line["ProbabilityChange"] = line["Tprobability"]
+                            else:
+                                line["ProbabilityChange"] = line["CTprobability"]
                             
-                            columns = line.keys()
-                            values = [line[column] for column in columns]
-                            while True:
-                                try:
-                                    cur.execute("insert into roundstates (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values))) 
-                                    conn.commit()
-                                    break
-                                except psycopg2.OperationalError:
-                                    time.sleep(60)
-                                    print("Internet Timeout")
-                                    conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
-                                    cur = conn.cursor()
-                            prevRound = int(line["Round"])
-                            prevProb = line["CTprobability"]
-                            #prevHP = int(line["CThp"]) + int(line["Thp"])
-                    except KeyError as e:
-                        print(playersConvert)
+                        
+                        columns = line.keys()
+                        values = [line[column] for column in columns]
+                        while True:
+                            try:
+                                #print(line["Round"] + '@' + line["Tick"] + '                            ', end="\r")
+                                cur.execute("insert into roundstates (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values))) 
+                                break
+                            except psycopg2.OperationalError:
+                                time.sleep(60)
+                                print("Internet Timeout")
+                                conn = connectDB.database_credentials()
+                                cur = conn.cursor()
+                        prevRound = int(line["Round"])
+                        prevProb = line["CTprobability"]
+                        #prevHP = int(line["CThp"]) + int(line["Thp"])
+                    conn.commit()
+                except KeyError as e:
+                    print("KeyError")
+                    print(playersConvert)
+                    print(e)
+                    print(line["mapid"])
+                    print('KeyError')
+                    traceback.print_exc()
+                    file = './logs/Cleaned/Error/WinProb/'+mapID
+                    txtFile.close()
+                    conn.rollback()
+                    with open(file, 'w+') as txtFile:
+                        txtFile.write(headers[0])
+                        txtFile.write(headers[1])
+                        for line in reversed(roundProbOutput):
+                            txtFile.write(json.dumps(line) + "\n")
+                    return
+                except psycopg2.errors.ForeignKeyViolation:
+                    print("Foregin Key Violation")
+                    print(mapID)
+                    conn.rollback()
+                    pass
+                except TypeError as e:
+                        print("TypeError")
                         print(e)
-                        print(line["mapid"])
-                        print('KeyError')
-                        traceback.print_exc()
-                        file = './logs/Cleaned/Error/WinProb/'+mapID
-                        txtFile.close()
-                        conn.rollback()
-                        with open(file, 'w+') as txtFile:
-                            txtFile.write(headers[0])
-                            txtFile.write(headers[1])
-                            for line in reversed(roundProbOutput):
-                                txtFile.write(json.dumps(line) + "\n")
-                        return
-                    except psycopg2.errors.ForeignKeyViolation:
                         print(mapID)
-                        conn.rollback()
+                        print(line)
+                        traceback.print_exc()
                         pass
-                    except TypeError as e:
-                            print(e)
-                            print(mapID)
-                            print(line)
-                            traceback.print_exc()
-                            pass
                 
 
 
@@ -582,7 +580,6 @@ def main(path, mapID):
                             columns = line.keys()
                             values = [line[column] for column in columns]        
                             cur.execute("insert into kills (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values)))     
-                            conn.commit()
                         if "SavedValue" in line :
                             line["Save"].replace('(1)', "")
                             if 'ax1le' not in line["Save"].lower():
@@ -596,12 +593,13 @@ def main(path, mapID):
                             while True:
                                 try:
                                     cur.execute("insert into saves (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values)))
-                                    conn.commit()
                                     break
                                 except psycopg2.OperationalError:
                                     time.sleep(60)
                                     print("Internet Timeout")
+                    conn.commit()
                 except KeyError as e:
+                    print("Key Error")
                     conn.rollback()
                     print(e)
                     delete = True
@@ -624,21 +622,20 @@ def main(path, mapID):
             if delete:
                 os.remove(file)
             cur.close()     
-            conn.commit()
-
+        
             
 
 
-
+            conn.commit()
     except UnicodeDecodeError:
         print("Unicode Error")
-        print(mapID)       
-        conn.rollback()  
+        print(mapID)        
 
     except json.JSONDecodeError as e:
+        print("JSON Decode Error")
         print(e)
         print(line)       
-        exit()       
 
+            
 if __name__ == "__main__":
     main(sys.argv[1])

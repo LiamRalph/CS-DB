@@ -1,4 +1,4 @@
-import csv, os, time, requests, patoolib
+import csv, os, time, requests, patoolib, connectDB
 from tqdm import tqdm 
 import datetime
 import psycopg2
@@ -21,11 +21,11 @@ def main():
 
 
     while True:
-        DemoParser.main()
+
         getAlreadyDownloaded(alreadyDownloadedIDs)
 
         demoLinks = getDemoLinks(alreadyDownloadedIDs)
-        if demoLinks is not None:
+        if demoLinks:
             downloadDemos(demoLinks, alreadyDownloadedIDs)
         DemoParser.main()
         time.sleep(300)
@@ -37,11 +37,11 @@ def getAlreadyDownloaded(alreadyDownloadedIDs):
 
 def getDemoLinks(alreadyDownloadedIDs):
     sql = """
-            SELECT demoid from matches where date > '2022-05-08'::date
+            SELECT demoid from matches 
         """
     conn = None
     try:
-        conn = psycopg2.connect("dbname=CSGO user=postgres password=Hoc.ey1545" + " host='" + IP + "'")
+        conn = connectDB.database_credentials()
         cur = conn.cursor()
         cur.execute(sql)
         matches = cur.fetchall()
@@ -82,7 +82,6 @@ def downloadDemos(demoLinks, alreadyDownloadedIDs):
         i += 1
         alreadyDownloadedIDs.append(demo)
         matchCount+=1
-        DemoParser.main()
         print("Match "+str(matchCount)+'/'+str(length)+" Complete")
         end = time.time()
         print("Match Time: "+str(datetime.timedelta(seconds=(end - match_start))))
@@ -90,6 +89,7 @@ def downloadDemos(demoLinks, alreadyDownloadedIDs):
         match_start = time.time()
     #print("Run Time:   "+str(datetime.timedelta(seconds=(time.time() - start))), end='\r')
     demoLinks = []
+    return
 
 if __name__ == "__main__":
     main()
