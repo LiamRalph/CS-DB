@@ -251,7 +251,7 @@ func main() {
 	p.RegisterEventHandler(func(e events.Footstep) {
 		gs := p.GameState()
 		if rs == "1" {
-			if footstepCount == 15 {
+			if footstepCount == 8 {
 				WinProb(gs, roundStartTick, BombPlanted, TimePlanted, outputFile, site, BombDefused, END_ROUND, siteA, siteB, "None", "None", 0, rs)
 				footstepCount = 0
 			} else {

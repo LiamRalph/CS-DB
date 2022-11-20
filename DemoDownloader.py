@@ -28,7 +28,7 @@ def main():
         if demoLinks:
             downloadDemos(demoLinks, alreadyDownloadedIDs)
         DemoParser.main()
-        time.sleep(300)
+        time.sleep(150)
 
 
 def getAlreadyDownloaded(alreadyDownloadedIDs):

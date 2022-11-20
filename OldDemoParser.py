@@ -29,7 +29,7 @@ def main():
     cur.execute("""
                 SELECT demoid, Match.matchid, count(Map) as mapCount, case when Match.date > '2014-01-01'::date then 1 else 0 end from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
-                where Match.date < '2021-01-01'::date
+                where Match.date < '2022-05-09'::date
                 GROUP BY demoid, Match.matchid
                 ORDER BY date DESC """
                 )  

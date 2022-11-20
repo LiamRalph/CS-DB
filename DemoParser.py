@@ -2,10 +2,9 @@ import requests, connectDB
 import os
 import patoolib
 import time
-import datetime
 from tqdm import tqdm 
 from bs4 import BeautifulSoup
-from datetime import date
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import psycopg2, psycopg2.extras
 import shutil
@@ -29,10 +28,10 @@ def main():
     cur.execute("""
                 SELECT demoid, Match.matchid, count(Map) as mapCount, case when Match.date > '2021-01-01'::date then 1 else 0 end from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
-                where Match.date > '2021-01-01'::date
+                where Match.date > (%s::date - INTERVAL'1 MONTH')::date
                 GROUP BY demoid, Match.matchid
                 
-                ORDER BY date DESC """
+                ORDER BY date DESC """, (datetime.today().strftime('%Y-%m-%d'),)
                 )  
     matches = []
     for row in cur:
