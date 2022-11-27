@@ -15,33 +15,38 @@ def main():
 
 
     OriginalURL = "https://www.hltv.org"
-    header = ["MatchLink", "MatchID", "DemoLink", "DemoID", "TeamNames", "TeamIDs", "PlayerNames", 'team1', 'team2', 'team1rank', 'team2rank', "PlayerIDs", "Sides", "MapScores", "HalfScore", "MapNames", "Winner", "Loser", "Time", "Date", "UNIX", "TournamentName", "TournamentID", "Maps", "POTM" ]
+    header = ["MatchLink", "MatchID", "DemoLink", "DemoID", "TeamNames", "TeamIDs", "PlayerNames", 'team1', 'team2', 'team1rank', 'team2rank', "PlayerIDs", "Sides", "MapScores", "HalfScore", "MapNames", "Winner", "Loser", "Time", "Date", "UNIX", "TournamentName", "TournamentID", "Maps", "MapsPicked", "POTM" ]
 
     
     while True:
-        createDB()
-        savedMatchLinks = getAlreadySaved()
-        queryString = '/results?'
-        queryString = getQuery(queryString)
-        URL = OriginalURL + queryString
-        matchLinks = []
-        scrollThroughPages(matchLinks, savedMatchLinks, URL)
-        matchCount = len(matchLinks)
-        matchCounter = 1
-        if matchCount > 0:
-            print(str(matchCount) + " Matches Found")
-        matchDicts = []
-        for match in reversed(matchLinks):
-            matchInfoDict = dict.fromkeys(header)
-            getMatchInfo(matchInfoDict, match)
-            if  "team1rank" in matchInfoDict and "team2rank" in matchInfoDict:
-                addToFile(matchInfoDict, header)
-                addToDB(matchInfoDict)
-                output = str(matchCounter) + " / " + str(matchCount)
-                print(output, end='\r')
-                matchCounter += 1
-                matchDicts.append(matchInfoDict)
-        time.sleep(300)
+        try:
+            createDB()
+            savedMatchLinks = getAlreadySaved()
+            queryString = '/results?'
+            queryString = getQuery(queryString)
+            URL = OriginalURL + queryString
+            matchLinks = []
+            scrollThroughPages(matchLinks, savedMatchLinks, URL)
+            matchCount = len(matchLinks)
+            matchCounter = 1
+            if matchCount > 0:
+                print(str(matchCount) + " Matches Found")
+            matchDicts = []
+            for match in reversed(matchLinks):
+                matchInfoDict = dict.fromkeys(header)
+                getMatchInfo(matchInfoDict, match)
+                if  "team1rank" in matchInfoDict and "team2rank" in matchInfoDict:
+                    addToFile(matchInfoDict, header)
+                    addToDB(matchInfoDict)
+                    output = str(matchCounter) + " / " + str(matchCount)
+                    print(output, end='\r')
+                    matchCounter += 1
+                    matchDicts.append(matchInfoDict)
+            time.sleep(300)
+        except Exception as e:
+            print(e)
+            time.sleep(300)
+            continue
    
     
     
@@ -132,6 +137,21 @@ def createDB():
                             FOREIGN KEY(loserid) 
 	                            REFERENCES teams(teamid),
                         CONSTRAINT map_match_fk
+                            FOREIGN KEY(matchid) 
+	                            REFERENCES matches(matchid)
+                        )
+                    """)
+            cur.execute(command)
+        if not tableExists('map_picks'):
+            command = (
+                    """
+                    CREATE TABLE map_picks (
+                        matchid INT, 
+                        mapNumber INT, 
+                        mapname TEXT, 
+                        mapPlayed boolean,
+                        PRIMARY KEY (matchid, mapNumber), 
+                        CONSTRAINT map_picks
                             FOREIGN KEY(matchid) 
 	                            REFERENCES matches(matchid)
                         )
@@ -242,6 +262,7 @@ def createDB():
                     CREATE TABLE rounds (
                         mapid TEXT,
                         round INT,
+                        MapTick INT,
                         winnerside TEXT,
                         winner INT,
                         loser INT,
@@ -275,6 +296,7 @@ def createDB():
                     CREATE TABLE roundstates (
                         mapid TEXT,
                         round INT,
+                        MapTick INT,
                         Tick INT,
                         CT INT,
                         T INT,
@@ -351,7 +373,6 @@ def getQuery(queryString):
         else:
             stars = 2
         StartDate = Start[0].strftime("%Y-%m-%d")
-        #StartDate = '2022-05-08' 
         queryString += 'startDate='+StartDate+'&endDate='+TodayDate+'&content=demo&stars='+str(stars)
     else:
         stars = 2
@@ -408,11 +429,19 @@ def getMatchInfo(matchInfoDict, match):
     matchInfoDict["Sides"] = []
     matchInfoDict["HalfScore"] = []
     mapPlayedCount = 0
+    matchInfoDict["MapsPicked"] = []
+    mapTracker = 1
+    
     for i in range(0, mapCount*2, 2):
         if(scores[i].text.isdigit() and scores[i+1].text.isdigit()):
             matchInfoDict["MapScores"].append([int(scores[i].text), int(scores[i+1].text)])
             mapPlayedCount += 1
-        
+    for map in maps:
+        mapPlayed = True
+        if mapTracker > mapPlayedCount:
+            mapPlayed = False
+        matchInfoDict["MapsPicked"].append([map.find('div', class_='mapname').text, mapPlayed])
+        mapTracker += 1
     for i in range(0, mapPlayedCount, 1):   
         matchInfoDict["MapNames"].append(maps[i].find('div', class_='mapname').text)
         if len(sides[i].find_all('span')) > 0:
@@ -427,7 +456,6 @@ def getMatchInfo(matchInfoDict, match):
 
             matchInfoDict["HalfScore"].append(-1)
             matchInfoDict["HalfScore"].append(-1)
-
     try:
         matchInfoDict["Winner"] = matchSoup.find('div', class_='won').find_parent('div').find('a')["href"].split("/")[3]
         matchInfoDict["Loser"] = matchSoup.find('div', class_='lost').find_parent('div').find('a')["href"].split("/")[3]
@@ -536,7 +564,7 @@ def addToFile(matchInfoDict, header):
         writer.writerow(matchInfoDict)   
 
 def addToDB(matchInfoDict):
-
+    mapNotPicked = matchInfoDict.pop("MapsPicked", None)
     scores = matchInfoDict.pop("MapScores", None)
     maps = matchInfoDict.pop("MapNames", None)
     sides = matchInfoDict.pop("Sides", None)
@@ -589,6 +617,12 @@ def addToDB(matchInfoDict):
                 sql = "INSERT into player_maps (playerid, mapid, teamid) values (%s, %s, %s)  ON CONFLICT DO NOTHING;"
                 cur.execute(sql, (player[1], mapID, teamsMatch[1][1]))
             mapCount += 1
+        mapCount = 1
+        for map in mapNotPicked:
+            sql = "INSERT into map_picks (matchid, mapNumber, mapname, mapPlayed) values (%s, %s, %s, %s)  ON CONFLICT DO NOTHING;"
+            cur.execute(sql, (matchInfoDict["MatchID"], mapCount, map[0], map[1]))
+            mapCount += 1
+
         
         
 

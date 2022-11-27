@@ -21,14 +21,18 @@ def main():
 
 
     while True:
+        try:
+            getAlreadyDownloaded(alreadyDownloadedIDs)
 
-        getAlreadyDownloaded(alreadyDownloadedIDs)
-
-        demoLinks = getDemoLinks(alreadyDownloadedIDs)
-        if demoLinks:
-            downloadDemos(demoLinks, alreadyDownloadedIDs)
-        DemoParser.main()
-        time.sleep(150)
+            demoLinks = getDemoLinks(alreadyDownloadedIDs)
+            if demoLinks:
+                downloadDemos(demoLinks, alreadyDownloadedIDs)
+            DemoParser.main()
+            time.sleep(150)
+        except Exception as e:
+            print(e)
+            time.sleep(300)
+            continue
 
 
 def getAlreadyDownloaded(alreadyDownloadedIDs):
