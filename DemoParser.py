@@ -12,7 +12,7 @@ import re
 import cleanLogs
 def main():
     #Init Variables
-
+    badMatchIDs = [2360099, 2360344, 2360098] #
     errors = []
     for file in os.listdir("./logs/Cleaned/Error/Kill"):
         errors.append(file.replace('.txt', ''))
@@ -28,10 +28,10 @@ def main():
     cur.execute("""
                 SELECT demoid, Match.matchid, count(Map) as mapCount, case when Match.date > '2021-01-01'::date then 1 else 0 end from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
-                where Match.date > (%s::date - INTERVAL'1 MONTH')::date
+                where Match.date > (%s::date - INTERVAL'1 MONTH')::date and Match.matchid != all(%s)
                 GROUP BY demoid, Match.matchid
                 
-                ORDER BY date DESC """, (datetime.today().strftime('%Y-%m-%d'),)
+                ORDER BY date DESC """, (datetime.today().strftime('%Y-%m-%d'),badMatchIDs)
                 )  
     matches = []
     for row in cur:

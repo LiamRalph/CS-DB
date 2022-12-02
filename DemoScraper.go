@@ -53,7 +53,6 @@ func main() {
 		output = "Match: Game State Changed \n"
 		roundFile.WriteString(output)
 		outputFile.WriteString(output)
-
 	})*/
 
 	var siteA r3.Vector
@@ -185,12 +184,10 @@ func main() {
 				}
 				if e.Victim.Team == 3 {
 					output := fmt.Sprintf("{\"Round\":\"%d\", \"Tick\":\"%d\", \"teamMembersAlive\":\"%d\", \"opponentsAlive\":\"%d\", \"Kill\":\"%s\", \"Death\": \"%s\", \"Weapon\": \"%s\", \"Headshot\": \"%t\", \"KillerHealth\": \"%d\", \"KillerArmor\": \"%d\", \"KillerHelmet\": \"%t\", \"VictimHealth\": \"%d\", \"VictimArmor\": \"%d\", \"VictimHelmet\": \"%t\", \"KillerX\": \"%f\", \"KillerY\": \"%f\", \"KillerZ\": \"%f\", \"KillerPitch\": \"%f\", \"KillerYaw\": \"%f\", \"VictimX\": \"%f\", \"VictimY\": \"%f\", \"VictimZ\": \"%f\", \"VictimPitch\": \"%f\", \"VictimYaw\": \"%f\", \"KillerFlashDuration\": \"%d\", \"VictimFlashDuration\": \"%d\", \"VictimPlantingOrDefusing\": \"%t\", \"VictimWeapon\": \"%s\", \"VictimReloading\": \"%t\", \"VictimSpottedKiller\": \"%t\", \"KillerXvel\": \"%f\", \"KillerYvel\": \"%f\", \"KillerZvel\": \"%f\", \"VictimXvel\": \"%f\", \"VictimYvel\": \"%f\", \"VictimZvel\": \"%f\"}\n", roundNo, tick-roundStartTick, tAlive, ctAlive, e.Killer, e.Victim, e.Weapon, e.IsHeadshot, KillerHealth, KillerArmour, KillerHelmet, VictimHealth, VictimArmour, VictimHelmet, KillerX, KillerY, KillerZ, KillerPitch, KillerYaw, VictimX, VictimY, VictimZ, VictimPitch, VictimYaw, KillerFlash, VictimFlash, planting_defusing, e.Victim.ActiveWeapon(), e.Victim.IsReloading, Spotted, KillerXvel, KillerYvel, KillerZvel, VictimXvel, VictimYvel, VictimZvel)
-					//fmt.Println(output)
 					outputFile.WriteString(output)
 				}
 				if e.Victim.Team == 2 {
 					output := fmt.Sprintf("{\"Round\":\"%d\", \"Tick\":\"%d\", \"teamMembersAlive\":\"%d\", \"opponentsAlive\":\"%d\", \"Kill\":\"%s\", \"Death\": \"%s\", \"Weapon\": \"%s\", \"Headshot\": \"%t\", \"KillerHealth\": \"%d\", \"KillerArmor\": \"%d\", \"KillerHelmet\": \"%t\", \"VictimHealth\": \"%d\", \"VictimArmor\": \"%d\", \"VictimHelmet\": \"%t\", \"KillerX\": \"%f\", \"KillerY\": \"%f\", \"KillerZ\": \"%f\", \"KillerPitch\": \"%f\", \"KillerYaw\": \"%f\", \"VictimX\": \"%f\", \"VictimY\": \"%f\", \"VictimZ\": \"%f\", \"VictimPitch\": \"%f\", \"VictimYaw\": \"%f\", \"KillerFlashDuration\": \"%d\", \"VictimFlashDuration\": \"%d\", \"VictimPlantingOrDefusing\": \"%t\", \"VictimWeapon\": \"%s\", \"VictimReloading\": \"%t\", \"VictimSpottedKiller\": \"%t\", \"KillerXvel\": \"%f\", \"KillerYvel\": \"%f\", \"KillerZvel\": \"%f\", \"VictimXvel\": \"%f\", \"VictimYvel\": \"%f\", \"VictimZvel\": \"%f\"}\n", roundNo, tick-roundStartTick, ctAlive, tAlive, e.Killer, e.Victim, e.Weapon, e.IsHeadshot, KillerHealth, KillerArmour, KillerHelmet, VictimHealth, VictimArmour, VictimHelmet, KillerX, KillerY, KillerZ, KillerPitch, KillerYaw, VictimX, VictimY, VictimZ, VictimPitch, VictimYaw, KillerFlash, VictimFlash, planting_defusing, e.Victim.ActiveWeapon(), e.Victim.IsReloading, Spotted, KillerXvel, KillerYvel, KillerZvel, VictimXvel, VictimYvel, VictimZvel)
-					//fmt.Println(output)
 					outputFile.WriteString(output)
 
 				}
@@ -303,10 +300,6 @@ func main() {
 			} else {
 				Winner = common.TeamCounterTerrorists
 			}
-			if roundNo == 1 || roundNo == 16 {
-				ctMoney = 4500
-				tMoney = 4500
-			}
 
 			switch Winner {
 			case common.TeamTerrorists:
@@ -342,7 +335,7 @@ func main() {
 						ctValueEnd = 0
 					}
 				}
-				output := fmt.Sprintf("{\"Round\":\"%d\",  \"WinnerSide\":\"%s\", \"Winner\":\"%s\", \"Loser\":\"%s\", \"WinnerScore\": \"%d\", \"LoserScore\": \"%d\", \"WinnerValue\": \"%d\", \"LoserValue\": \"%d\", \"WinnerAlive\": \"%d\", \"LoserAlive\": \"%d\", \"WinnerSaved\": \"%d\", \"LoserSaved\": \"%d\", \"WinnerMoney\": \"%d\", \"LoserMoney\": \"%d\", \"WinnerStreak\": \"%d\", \"LoserStreak\": \"%d\"}\n", roundNo, "T", gs.TeamTerrorists().ClanName(), gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().Score()+1, gs.TeamCounterTerrorists().Score(), tValue, ctValue, tAlive, ctAlive, tValueEnd, ctValueEnd, tMoney, ctMoney, tStreak, ctStreak)
+				output := fmt.Sprintf("{\"Round\":\"%d\", \"WinnerSide\":\"%s\", \"Winner\":\"%s\", \"Loser\":\"%s\", \"WinnerScore\": \"%d\", \"LoserScore\": \"%d\", \"WinnerValue\": \"%d\", \"LoserValue\": \"%d\", \"WinnerAlive\": \"%d\", \"LoserAlive\": \"%d\", \"WinnerSaved\": \"%d\", \"LoserSaved\": \"%d\", \"WinnerMoney\": \"%d\", \"LoserMoney\": \"%d\", \"WinnerStreak\": \"%d\", \"LoserStreak\": \"%d\"}\n", roundNo, "T", gs.TeamTerrorists().ClanName(), gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().Score()+1, gs.TeamCounterTerrorists().Score(), tValue, ctValue, tAlive, ctAlive, tValueEnd, ctValueEnd, tMoney, ctMoney, tStreak, ctStreak)
 				outputFile.WriteString(output)
 				if tStreak > 0 {
 					tStreak -= 1
@@ -358,7 +351,7 @@ func main() {
 					}
 
 				}
-				output := fmt.Sprintf("{\"Round\":\"%d\",  \"WinnerSide\":\"%s\", \"Winner\":\"%s\", \"Loser\":\"%s\", \"WinnerScore\": \"%d\", \"LoserScore\": \"%d\", \"WinnerValue\": \"%d\", \"LoserValue\": \"%d\", \"WinnerAlive\": \"%d\", \"LoserAlive\": \"%d\", \"WinnerSaved\": \"%d\", \"LoserSaved\": \"%d\", \"WinnerMoney\": \"%d\", \"LoserMoney\": \"%d\", \"WinnerStreak\": \"%d\", \"LoserStreak\": \"%d\"}\n", roundNo, "CT", gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().ClanName(), gs.TeamCounterTerrorists().Score()+1, gs.TeamTerrorists().Score(), ctValue, tValue, ctAlive, tAlive, ctValueEnd, tValueEnd, ctMoney, tMoney, ctStreak, tStreak)
+				output := fmt.Sprintf("{\"Round\":\"%d\", \"WinnerSide\":\"%s\", \"Winner\":\"%s\", \"Loser\":\"%s\", \"WinnerScore\": \"%d\", \"LoserScore\": \"%d\", \"WinnerValue\": \"%d\", \"LoserValue\": \"%d\", \"WinnerAlive\": \"%d\", \"LoserAlive\": \"%d\", \"WinnerSaved\": \"%d\", \"LoserSaved\": \"%d\", \"WinnerMoney\": \"%d\", \"LoserMoney\": \"%d\", \"WinnerStreak\": \"%d\", \"LoserStreak\": \"%d\"}\n", roundNo, "CT", gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().ClanName(), gs.TeamCounterTerrorists().Score()+1, gs.TeamTerrorists().Score(), ctValue, tValue, ctAlive, tAlive, ctValueEnd, tValueEnd, ctMoney, tMoney, ctStreak, tStreak)
 				outputFile.WriteString(output)
 				if ctStreak > 0 {
 					ctStreak -= 1
@@ -452,7 +445,7 @@ func main() {
 					ctValueEnd = 0
 				}
 			}
-			output := fmt.Sprintf("{\"Round\":\"%d\", \"MapTick\":\"%d\", \"WinnerSide\":\"%s\", \"Winner\":\"%s\", \"Loser\":\"%s\", \"WinnerScore\": \"%d\", \"LoserScore\": \"%d\", \"WinnerValue\": \"%d\", \"LoserValue\": \"%d\", \"WinnerAlive\": \"%d\", \"LoserAlive\": \"%d\", \"WinnerSaved\": \"%d\", \"LoserSaved\": \"%d\", \"WinnerMoney\": \"%d\", \"LoserMoney\": \"%d\", \"WinnerStreak\": \"%d\", \"LoserStreak\": \"%d\"}\n", roundNo, roundStartTick, "T", gs.TeamTerrorists().ClanName(), gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().Score(), gs.TeamCounterTerrorists().Score(), tValue, ctValue, tAlive, ctAlive, tValueEnd, ctValueEnd, tMoney, ctMoney, tStreak, ctStreak)
+			output := fmt.Sprintf("{\"Round\":\"%d\", \"MapTick\":\"%d\", \"WinnerSide\":\"%s\", \"Winner\":\"%s\", \"Loser\":\"%s\", \"WinnerScore\": \"%d\", \"LoserScore\": \"%d\", \"WinnerValue\": \"%d\", \"LoserValue\": \"%d\", \"WinnerAlive\": \"%d\", \"LoserAlive\": \"%d\", \"WinnerSaved\": \"%d\", \"LoserSaved\": \"%d\", \"WinnerMoney\": \"%d\", \"LoserMoney\": \"%d\", \"WinnerStreak\": \"%d\", \"LoserStreak\": \"%d\"}\n", roundNo, gs.IngameTick(), "T", gs.TeamTerrorists().ClanName(), gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().Score(), gs.TeamCounterTerrorists().Score(), tValue, ctValue, tAlive, ctAlive, tValueEnd, ctValueEnd, tMoney, ctMoney, tStreak, ctStreak)
 			outputFile.WriteString(output)
 			if tStreak > 0 {
 				tStreak -= 1
@@ -469,7 +462,7 @@ func main() {
 				}
 
 			}
-			output := fmt.Sprintf("{\"Round\":\"%d\", \"MapTick\":\"%d\", \"WinnerSide\":\"%s\", \"Winner\":\"%s\", \"Loser\":\"%s\", \"WinnerScore\": \"%d\", \"LoserScore\": \"%d\", \"WinnerValue\": \"%d\", \"LoserValue\": \"%d\", \"WinnerAlive\": \"%d\", \"LoserAlive\": \"%d\", \"WinnerSaved\": \"%d\", \"LoserSaved\": \"%d\", \"WinnerMoney\": \"%d\", \"LoserMoney\": \"%d\", \"WinnerStreak\": \"%d\", \"LoserStreak\": \"%d\"}\n", roundNo, roundStartTick, "CT", gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().ClanName(), gs.TeamCounterTerrorists().Score(), gs.TeamTerrorists().Score(), ctValue, tValue, ctAlive, tAlive, ctValueEnd, tValueEnd, ctMoney, tMoney, ctStreak, tStreak)
+			output := fmt.Sprintf("{\"Round\":\"%d\", \"MapTick\":\"%d\", \"WinnerSide\":\"%s\", \"Winner\":\"%s\", \"Loser\":\"%s\", \"WinnerScore\": \"%d\", \"LoserScore\": \"%d\", \"WinnerValue\": \"%d\", \"LoserValue\": \"%d\", \"WinnerAlive\": \"%d\", \"LoserAlive\": \"%d\", \"WinnerSaved\": \"%d\", \"LoserSaved\": \"%d\", \"WinnerMoney\": \"%d\", \"LoserMoney\": \"%d\", \"WinnerStreak\": \"%d\", \"LoserStreak\": \"%d\"}\n", roundNo, gs.IngameTick(), "CT", gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().ClanName(), gs.TeamCounterTerrorists().Score(), gs.TeamTerrorists().Score(), ctValue, tValue, ctAlive, tAlive, ctValueEnd, tValueEnd, ctMoney, tMoney, ctStreak, tStreak)
 			outputFile.WriteString(output)
 			if ctStreak > 0 {
 				ctStreak -= 1
@@ -579,13 +572,12 @@ func WinProb(gs dem.GameState, roundStartTick int, BombPlanted bool, TimePlanted
 		}
 	}
 	tick := gs.IngameTick()
-	roundtick := tick - roundStartTick
 	TimeSincePlanted := 0
 	if BombPlanted {
 		TimeSincePlanted = (gs.IngameTick() - TimePlanted)
 	}
 	if ctAlive > 0 && tAlive > 0 {
-		output := fmt.Sprintf("{\"Round\":\"%d\", \"MapTick\":\"%d\", \"Tick\":\"%d\", \"CT\":\"%s\", \"T\":\"%s\", \"CTalive\":\"%d\", \"Talive\":\"%d\", \"CTdistA\":\"%f\", \"TdistA\":\"%f\", \"CTdistB\":\"%f\", \"TdistB\":\"%f\", \"CTvalue\":\"%d\", \"Tvalue\":\"%d\", \"CThp\":\"%d\", \"Thp\":\"%d\", \"BombPlanted\":\"%t\", \"TimeSincePlant\":\"%d\", \"PlantSite\":\"%s\", \"Attacker\":\"%s\", \"Victim\":\"%s\", \"Damage\":\"%d\"}\n", roundNo, tick, roundtick, gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().ClanName(), ctAlive, tAlive, ctDistAmin, tDistAmin, ctDistBmin, tDistBmin, ctValueEnd, tValueEnd, ctHP, tHP, BombPlanted, TimeSincePlanted, site, attacker, victim, DMG)
+		output := fmt.Sprintf("{\"Round\":\"%d\", \"MapTick\":\"%d\", \"Tick\":\"%d\", \"CT\":\"%s\", \"T\":\"%s\", \"CTalive\":\"%d\", \"Talive\":\"%d\", \"CTdistA\":\"%f\", \"TdistA\":\"%f\", \"CTdistB\":\"%f\", \"TdistB\":\"%f\", \"CTvalue\":\"%d\", \"Tvalue\":\"%d\", \"CThp\":\"%d\", \"Thp\":\"%d\", \"BombPlanted\":\"%t\", \"TimeSincePlant\":\"%d\", \"PlantSite\":\"%s\", \"Attacker\":\"%s\", \"Victim\":\"%s\", \"Damage\":\"%d\"}\n", roundNo, tick, roundStartTick, gs.TeamCounterTerrorists().ClanName(), gs.TeamTerrorists().ClanName(), ctAlive, tAlive, ctDistAmin, tDistAmin, ctDistBmin, tDistBmin, ctValueEnd, tValueEnd, ctHP, tHP, BombPlanted, TimeSincePlanted, site, attacker, victim, DMG)
 		//_ = output
 		outputFile.WriteString(output)
 	}

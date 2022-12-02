@@ -68,8 +68,6 @@ def main(path, mapID):
                 elif "Kill" in line and not firstKillFound:
                     #print(line)
                     line = json.loads(line.replace("'", "").replace("\\", ""), strict=False)
-                    
-
                     deltaX = float(line['KillerX']) - float(line['VictimX'])
                     deltaY = float(line['KillerY']) - float(line['VictimY'])
                     deltaZ = float(line['KillerZ']) - float(line['VictimZ'])
@@ -250,6 +248,8 @@ def main(path, mapID):
                 txtFile.write(headers[1])
                 try:
                     for line in reversed(roundOutput):
+                        if int(line["Round"]) == 0:
+                            continue
                         line["mapid"] = mapID[:-4]
                         txtFile.write(json.dumps(line) + "\n")
                         if "WinnerScore" in line:
@@ -376,12 +376,18 @@ def main(path, mapID):
                                 try:
                                     cur.execute("insert into rounds (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values))) 
                                     break
-                                except (psycopg2.errors.ForeignKeyViolation, psycopg2.errors.InFailedSqlTransaction):
+                                except (psycopg2.errors.ForeignKeyViolation, psycopg2.errors.InFailedSqlTransaction) as e:
+                                    print(e)
                                     conn.rollback()
-                                    continue
+                                    break
                                 except psycopg2.OperationalError:
                                     time.sleep(60)
                                     print("Internet Timeout")
+                                except Exception as e:
+                                    print(e)
+                                    print(mapID)
+                                    break
+
                     conn.commit()
                                 
                 except KeyError as e:
@@ -518,8 +524,9 @@ def main(path, mapID):
                         for line in reversed(roundProbOutput):
                             txtFile.write(json.dumps(line) + "\n")
                     return
-                except psycopg2.errors.ForeignKeyViolation:
+                except psycopg2.errors.ForeignKeyViolation as e:
                     print("Foregin Key Violation")
+                    print(e)
                     print(mapID)
                     conn.rollback()
                     pass
@@ -595,6 +602,7 @@ def main(path, mapID):
                                     cur.execute("insert into saves (%s) values %s ON CONFLICT DO NOTHING", (psycopg2.extensions.AsIs(','.join(columns)), tuple(values)))
                                     break
                                 except psycopg2.OperationalError:
+                                    print(mapID)
                                     time.sleep(60)
                                     print("Internet Timeout")
                     conn.commit()
@@ -634,7 +642,11 @@ def main(path, mapID):
     except json.JSONDecodeError as e:
         print("JSON Decode Error")
         print(e)
-        print(line)       
+        print(line)  
+
+    except Exception as e:
+        print(e)
+        print(mapID)     
 
             
 if __name__ == "__main__":
