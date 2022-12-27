@@ -1,5 +1,6 @@
 import requests, connectDB
 import os
+import sys
 import patoolib
 import time
 from tqdm import tqdm 
@@ -10,7 +11,7 @@ import psycopg2, psycopg2.extras
 import shutil
 import re
 import cleanLogs
-def main():
+def main(odd):
     #Init Variables
     errors = []
     for file in os.listdir("./logs/Cleaned/Error/Kill"):
@@ -27,16 +28,19 @@ def main():
     cur.execute("""
                 SELECT demoid, Match.matchid, count(Map) as mapCount, count(Map) filter (where Map.mapname = 'Default' or Map.mapname = 'TBA') from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
-                where Match.date > (%s::date - INTERVAL'3 MONTHS')::date
+                where Match.matchid % 2 = %s
                 GROUP BY demoid, Match.matchid
                 
-                ORDER BY date DESC """, (datetime.today().strftime('%Y-%m-%d'),)
+                ORDER BY date DESC """, (odd,)#, (datetime.today().strftime('%Y-%m-%d'),)
                 )  
     matches = []
     for row in cur:
         matches.append(row)
     cur.close()
-
+    if odd > 0:
+        odd = '_odd'
+    else:
+        odd = ''
     
     matchCounter = 0
 
@@ -83,13 +87,13 @@ def main():
 
             if os.path.isfile(demo_path): 
                 try:
-                    patoolib.extract_archive(demo_path, outdir="./working_demos", verbosity=-1)
+                    patoolib.extract_archive(demo_path, outdir="./working_demos"+odd, verbosity=-1)
                 except patoolib.util.PatoolError:
                     print(demoid + " extract error")
                     continue
-                if(len(os.listdir("./working_demos")) == mapCount-int(default)):
+                if(len(os.listdir("./working_demos"+odd)) == mapCount-int(default)):
 
-                    demoNames = os.listdir("./working_demos")
+                    demoNames = os.listdir("./working_demos"+odd)
                     path = './working_demos/'
                     demoPaths = [os.path.join(path,i) for i in demoNames]
                     copy = demoPaths.copy()
@@ -125,7 +129,7 @@ def main():
                         mapNo += 1
                 else:
                     #print(str(matchid) + ' has maps in Parts')
-                    demoNames = os.listdir("./working_demos")
+                    demoNames = os.listdir("./working_demos"+odd)
                     path = './working_demos/'
                     demoPaths = [os.path.join(path,i) for i in demoNames]
                     demoPaths = sorted(demoPaths , key=os.path.getctime)
@@ -167,6 +171,7 @@ def main():
     print(str(matchCounter) + " Matches Parsed. ", end='\r')
                         
 if __name__ == "__main__":
-    main()
+    odd = int(sys.argv[1])
+    main(odd)
     
     
