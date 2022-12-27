@@ -242,7 +242,6 @@ def createDB():
                         VictimXvel float, 
                         VictimYvel float, 
                         VictimZvel float,
-                        ExpectedKill float,
                         PRIMARY KEY (mapid, round, kill, death),
                         CONSTRAINT killer_kills_fk
                             FOREIGN KEY(kill) 
@@ -256,13 +255,26 @@ def createDB():
                     )
                     """)
             cur.execute(command)
+        if not tableExists('kill_prob'):
+            command = (
+                    """
+                    CREATE TABLE kill_prob (
+                        mapid TEXT,
+                        round INT,
+                        kill INT,
+                        death INT,
+                        prob float,
+                        roundProbChange float,
+                        PRIMARY KEY (mapid,round,kill,death)
+                    )
+                    """)
+            cur.execute(command)
         if not tableExists('rounds'):
             command = (
                     """
                     CREATE TABLE rounds (
                         mapid TEXT,
                         round INT,
-                        MapTick INT,
                         winnerside TEXT,
                         winner INT,
                         loser INT,
@@ -280,8 +292,7 @@ def createDB():
                         losermoney INT,
                         winnerstreak INT,
                         loserstreak INT,
-                        CTprobabilityMap float,
-                        TprobabilityMap float,
+                        reason INT,
                         PRIMARY KEY (mapid, round),
                         CONSTRAINT maps_rounds_fk
                             FOREIGN KEY(mapid) 
@@ -289,14 +300,24 @@ def createDB():
                     )
                     """)
             cur.execute(command)
-
+        if not tableExists('map_prob'):
+            command = (
+                    """
+                    CREATE TABLE map_prob (
+                        mapid TEXT,
+                        round INT,
+                        probCT float,
+                        probChangeCT float,
+                        PRIMARY KEY (mapid,round)
+                    )
+                    """)
+            cur.execute(command)
         if not tableExists('roundstates'):
             command = (
                     """
                     CREATE TABLE roundstates (
                         mapid TEXT,
                         round INT,
-                        MapTick INT,
                         Tick INT,
                         CT INT,
                         T INT,
@@ -312,9 +333,6 @@ def createDB():
                         Thp INT, 
                         TimeSincePlant INT,
                         PlantSite TEXT,
-                        CTprobability float,
-                        Tprobability float,
-                        ProbabilityChange float,
                         attacker INT,
                         victim INT,
                         damage INT,
@@ -322,6 +340,19 @@ def createDB():
                         CONSTRAINT maps_rounds_fk
                             FOREIGN KEY(mapid, round) 
                                 REFERENCES rounds(mapid, round)
+                    )
+                    """)
+            cur.execute(command)
+        if not tableExists('rs_prob'):
+            command = (
+                    """
+                    CREATE TABLE rs_prob (
+                        mapid TEXT,
+                        round INT,
+                        tick INT,
+                        probCT float,
+                        probChangeCT float,
+                        PRIMARY KEY (mapid,round,tick)
                     )
                     """)
             cur.execute(command)
@@ -414,10 +445,11 @@ def getMatchInfo(matchInfoDict, match):
     matchSoup = BeautifulSoup(matchPage.text, "html.parser")
     matchInfoDict["MatchLink"] = match
     matchInfoDict["MatchID"] = match.split("/")[4]
-    for a in matchSoup.find_all('a', class_='flexbox left-right-padding'):
-            if(a['href'].startswith('/download/')):
-                matchInfoDict["DemoLink"] = OriginalURL + a['href']
-                matchInfoDict["DemoID"] = a['href'].split("/")[3]      
+    for a in matchSoup.find_all('a', class_='stream-box'):
+        
+        if(a['data-demo-link'].startswith('/download/')):
+            matchInfoDict["DemoLink"] = OriginalURL + a['data-demo-link']
+            matchInfoDict["DemoID"] = a['data-demo-link'].split("/")[3]      
     #print(matchInfoDict["MatchLink"])
     maps =  matchSoup.find_all('div', class_='map-name-holder')
     scores =  matchSoup.find_all('div', class_='results-team-score')
@@ -631,8 +663,8 @@ def addToDB(matchInfoDict):
             #print(result[0])
         conn.commit()
         cur.close()
-    except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
+    except Exception as e:
+            print(e)
     finally:
         if conn is not None:
             conn.close()

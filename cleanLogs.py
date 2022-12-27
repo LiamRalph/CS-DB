@@ -7,18 +7,12 @@ import Levenshtein
 import psycopg2
 import traceback
 import connectDB
-from joblib import dump, load
-from PredictorKills import predictKill
-from PredictorRounds import predictRound
-from PredictorMaps import predictMap
+
 #Iterate through logs
 
 def main(path, mapID):
     #mapID = '2356098-1.txt'
 
-    gbrK = load('ExKillModelXGB')
-    gbrR = load('ExRoundModelXGB')
-    gbrM = load('ExMapModelXGB')
     #subnet = '1.3'
     subnet = '86.113'
     IP = 'csgo.cqtpbfnejnsi.us-east-2.rds.amazonaws.com'
@@ -259,117 +253,13 @@ def main(path, mapID):
 
                             line["Winner"] = teamsConvert[line["Winner"].lower()]
                             line["Loser"] = teamsConvert[line["Loser"].lower()]
-                            if line["WinnerSide"] == 'CT':
+                            if line["WinnerSide"] == 'ct':
                                 line["CT"] = line["Winner"]
                                 line["T"] = line["Loser"]
                             else:
                                 line["T"] = line["Winner"]
                                 line["CT"] = line["Loser"]
 
-
-                            
-                            CTstartMoney = 0
-                            TstartMoney = 0
-                            CTstartScore = 0
-                            TstartScore = 0
-                            CTstartSaved = 0
-                            TstartSaved = 0
-
-                            cur = conn.cursor()
-                            cur.execute("""SELECT M.winnerstart from maps M where M.mapid = %s""", (line["mapid"],))
-                            winnerstart = cur.fetchone()[0]
-
-                            cur = conn.cursor()
-                            cur.execute("""SELECT M.winnerid from maps M where M.mapid = %s""", (line["mapid"],))
-                            winnerid = cur.fetchone()[0]
-
-                            if prevWinner != -1:
-                                if winnerstart == 'ct':
-                                    if prevWinner == winnerid:
-                                        CTstartSaved = WinnerSaved
-                                        TstartSaved = LoserSaved
-                                    else:
-                                        TstartSaved = WinnerSaved
-                                        CTstartSaved = LoserSaved
-                                else:
-                                    if prevWinner == winnerid:
-                                        TstartSaved = WinnerSaved
-                                        CTstartSaved = LoserSaved
-                                    else:
-                                        CTstartSaved = WinnerSaved
-                                        TstartSaved = LoserSaved
-
-
-
-                            if winnerstart == 'ct':
-                                if int(line["Winner"]) == winnerid:
-                                    CTstartStreak = line["WinnerStreak"]
-                                    TstartStreak = line["LoserStreak"]
-                                    CTstartMoney = int(line["WinnerMoney"])+CTstartSaved
-                                    TstartMoney = int(line["LoserMoney"])+TstartSaved
-                                    if int(line["Round"]) < 31:
-                                        CTstartScore = 16-(int(line["WinnerScore"])-1)
-                                        TstartScore = 16-(int(line["LoserScore"])-1)
-                                    else:
-                                        CTstartScore = ((math.ceil(int(line["Round"])/6.0)*3)+1)-(int(line["WinnerScore"])-1)
-                                        TstartScore = ((math.ceil(int(line["Round"])/6.0)*3)+1)-(int(line["LoserScore"])-1)
-                                    
-                                else:
-                                    CTstartStreak = line["LoserStreak"]
-                                    TstartStreak = line["WinnerStreak"]
-                                    CTstartMoney = int(line["LoserMoney"])+CTstartSaved
-                                    TstartMoney = int(line["WinnerMoney"])+TstartSaved  
-                                    if int(line["Round"]) < 31:
-                                        TstartScore = 16-(int(line["WinnerScore"])-1)
-                                        CTstartScore = 16-(int(line["LoserScore"])-1)
-                                    else:
-                                        TstartScore = ((math.ceil(int(line["Round"])/6.0)*3)+1)-(int(line["WinnerScore"])-1)
-                                        CTstartScore = ((math.ceil(int(line["Round"])/6.0)*3)+1)-(int(line["LoserScore"])-1)
-                            else:
-                                if int(line["Winner"]) == winnerid:
-                                    CTstartStreak = line["LoserStreak"]
-                                    TstartStreak = line["WinnerStreak"]
-                                    CTstartMoney = int(line["LoserMoney"])+CTstartSaved
-                                    TstartMoney = int(line["WinnerMoney"])+TstartSaved
-                                    if int(line["Round"]) < 31:
-                                        TstartScore = 16-(int(line["WinnerScore"])-1)
-                                        CTstartScore = 16-(int(line["LoserScore"])-1)
-                                    else:
-                                        TstartScore = ((math.ceil(int(line["Round"])/6.0)*3)+1)-(int(line["WinnerScore"])-1)
-                                        CTstartScore = ((math.ceil(int(line["Round"])/6.0)*3)+1)-(int(line["LoserScore"])-1)
-                                else:
-                                    CTstartStreak = line["WinnerStreak"]
-                                    TstartStreak = line["LoserStreak"]
-                                    CTstartMoney = int(line["WinnerMoney"])+CTstartSaved
-                                    TstartMoney = int(line["LoserMoney"])+TstartSaved
-                                    if int(line["Round"]) < 31:
-                                        CTstartScore = 16-(int(line["WinnerScore"])-1)
-                                        TstartScore = 16-(int(line["LoserScore"])-1)
-                                    else:
-                                        CTstartScore = ((math.ceil(int(line["Round"])/6.0)*3)+1)-(int(line["WinnerScore"])-1)
-                                        TstartScore = ((math.ceil(int(line["Round"])/6.0)*3)+1)-(int(line["LoserScore"])-1)
-                            
-
-
-                            cur = conn.cursor()
-                            cur.execute("""SELECT mapname from maps where mapid = %s""", (line["mapid"],))
-                            mapname = cur.fetchone()[0]
-
-
-
-                            #"tick": int(line["Tick"]), "CTstartMoney": int(CTstartMoney), "TstartMoney": int(TstartMoney), "CTstartStreak": int(CTstartStreak), "TstartStreak": int(TstartStreak)
-                            MapValues = {"mapname": mapname, "Round": int(line["Round"]), "CTstartScore": int(CTstartScore), "TstartScore": int(TstartScore), "CTstartMoney": int(CTstartMoney), "TstartMoney": int(TstartMoney), "CTstartStreak": int(CTstartStreak), "TstartStreak": int(TstartStreak)}
-                            line["CTprobabilityMap"], err = predictMap(MapValues, gbrM)
-                            #line["CTprobabilityMap"] = 0.5
-                            line["TprobabilityMap"] = 1-line["CTprobabilityMap"]
-
-
-
-
-
-                            LoserSaved = int(line["LoserSaved"])
-                            WinnerSaved = int(line["WinnerSaved"])
-                            prevWinner = int(line["Winner"])
                             columns = line.keys()
                             values = [line[column] for column in columns]
                             while True:
@@ -409,7 +299,6 @@ def main(path, mapID):
                     print("ValueError")
                     print(e)
                     print(mapID)
-                    print(MapValues)
                     traceback.print_exc()
 
 
@@ -419,11 +308,6 @@ def main(path, mapID):
                 txtFile.write(headers[0])
                 txtFile.write(headers[1])
                 try:
-                    prevRound = 1
-                    prevProb = 0.5
-                    prevProbMap = 0.5
-                    #prevHP = 1000
-                    winnerside = ''
                     roundProbOutput = roundProbOutput[1:]
                     for line in roundProbOutput:
                         if int(line["Round"]) == 0:
@@ -434,15 +318,7 @@ def main(path, mapID):
                         txtFile.write(json.dumps(line) + "\n")
                         line["CT"] = teamsConvert[line["CT"].lower()]
                         line["T"] = teamsConvert[line["T"].lower()]
-                        A = False
-                        B = False
-                        planted = False
-                        if line["PlantSite"] == 'A':
-                            A = True
-                            planted = True
-                        if line["PlantSite"] == 'B':
-                            B = True
-                            planted = True
+
                         if line["Attacker"] != "None":
                             line["Attacker"] = playersConvert[line["Attacker"]]
                         else:
@@ -451,47 +327,7 @@ def main(path, mapID):
                             line["Victim"] = playersConvert[line["Victim"]]
                         else:
                             line["Victim"] = -1
-                        
-
-                        
-                        RoundValues = {"tick": int(line["Tick"]), "ctalive": int(line["CTalive"]), "talive": int(line["Talive"]), "ctdista": float(line["CTdistA"]),"tdista": float(line["TdistA"]),"ctdistb": float(line["CTdistB"]),"tdistb": float(line["TdistB"]), "ctvalue": int(line["CTvalue"]), "tvalue": int(line["Tvalue"]), "cthp": int(line["CThp"]), "thp": int(line["Thp"]), "planteda": A, "plantedb": B, "bombplanted": planted, "timesinceplant": int(line["TimeSincePlant"])}
-                        line["CTprobability"], err = predictRound(RoundValues, gbrR)
-
-                        line["Tprobability"] = 1-line["CTprobability"]
-
-                        # if line["Attacker"] != -1 and line["Victim"] != -1:
-                        #     print(prevRound)
-                        #     print(int(line["Round"]))
-                        #     print(line["Attacker"])
-                        #     print(line["Victim"])
-                        #     print(line["CTprobability"])
-                        #     print(prevProb)
-                        #     print(prevProb - line["CTprobability"])
-                        #     print('------------------------------')
-                        if prevRound == int(line["Round"]):
-                            if line["Attacker"] != -1 and line["Victim"] != -1:
-                                    line["ProbabilityChange"] = abs(prevProb - line["CTprobability"] )
-                            else:
-                                line["ProbabilityChange"] = 0
-                        else:
-                            if prevRound != int(line["Round"]):
-                                cur = conn.cursor()
-                                cur.execute("""SELECT winnerside from rounds where mapid = %s and round = %s""", (line["mapid"],line["Round"]))
-                                winnerside = cur.fetchone()
-                            if winnerside is not None:
-                                winnerside = winnerside[0]
-                            elif int(line["Round"]) == 0:
-                                continue
-                            else:
-                                # print("No winner side")
-                                # print(line)
-                                continue
-                            if winnerside == "CT":
-                                line["ProbabilityChange"] = line["Tprobability"]
-                            else:
-                                line["ProbabilityChange"] = line["CTprobability"]
-                            
-                        
+    
                         columns = line.keys()
                         values = [line[column] for column in columns]
                         while True:
@@ -504,9 +340,6 @@ def main(path, mapID):
                                 print("Internet Timeout")
                                 conn = connectDB.database_credentials()
                                 cur = conn.cursor()
-                        prevRound = int(line["Round"])
-                        prevProb = line["CTprobability"]
-                        #prevHP = int(line["CThp"]) + int(line["Thp"])
                     conn.commit()
                 except KeyError as e:
                     print("KeyError")
@@ -569,16 +402,9 @@ def main(path, mapID):
                                 if line["Death"] in team2IDS:
                                     line["teamDeath"] = team2ID
 
-                                
-                                KillValues = {"tick":line["Tick"],"death":line["Death"],"kill":line["Kill"],"round":line["Round"], "mapid":line["mapid"], "teamkill":line["teamKill"],"teammembersalive":int(line["teamMembersAlive"]), "opponentsalive":int(line["opponentsAlive"]), "distance":line["distance"], "weapon":line["Weapon"], "killerhealth":int(line["KillerHealth"]), "killerarmor":int(line["KillerArmor"]),  "killerhelmet":line["KillerHelmet"],  "killerflashduration":float(line["KillerFlashDuration"]), "killerxvel":float(line["KillerXvel"]), "killeryvel":float(line["KillerYvel"]), "killerzvel":float(line["KillerZvel"]), "victimweapon":line["VictimWeapon"], "victimhealth":int(line["VictimHealth"]), "victimarmor":int(line["VictimArmor"]),   "victimhelmet":line["VictimHelmet"],  "victimflashduration":float(line["VictimFlashDuration"]), "victimxvel":float(line["VictimXvel"]), "victimyvel":float(line["VictimYvel"]), "victimzvel":float(line["VictimZvel"]), "killerz":line["KillerZ"], "victimz":line["VictimZ"]}
-                                line["ExpectedKill"] = predictKill(KillValues, gbrK)
-                                #line["ExpectedKill"] = 0.5
-
-
                             else:
                                 line["Kill"] = -1
                                 line["teamKill"] = -1
-                                line["ExpectedKill"] = -1
                                 line["Death"] = playersConvert[line["Death"]]
                                 if line["Death"] in team1IDS:
                                     line["teamDeath"] = team1ID
@@ -641,6 +467,7 @@ def main(path, mapID):
 
     except json.JSONDecodeError as e:
         print("JSON Decode Error")
+        print(mapID)   
         print(e)
         print(line)  
 

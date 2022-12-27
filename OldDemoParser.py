@@ -2,10 +2,9 @@ import requests, connectDB
 import os
 import patoolib
 import time
-import datetime
 from tqdm import tqdm 
 from bs4 import BeautifulSoup
-from datetime import date
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import psycopg2, psycopg2.extras
 import shutil
@@ -13,7 +12,6 @@ import re
 import cleanLogs
 def main():
     #Init Variables
-
     errors = []
     for file in os.listdir("./logs/Cleaned/Error/Kill"):
         errors.append(file.replace('.txt', ''))
@@ -27,11 +25,12 @@ def main():
     conn = connectDB.database_credentials()
     cur = conn.cursor()
     cur.execute("""
-                SELECT demoid, Match.matchid, count(Map) as mapCount, case when Match.date > '2014-01-01'::date then 1 else 0 end from matches Match
+                SELECT demoid, Match.matchid, count(Map) as mapCount, count(Map) filter (where Map.mapname = 'Default' or Map.mapname = 'TBA') from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
-                where Match.date < '2022-05-09'::date
+                where Match.date < (%s::date - INTERVAL'3 MONTHS')::date
                 GROUP BY demoid, Match.matchid
-                ORDER BY date DESC """
+                
+                ORDER BY date DESC """, (datetime.today().strftime('%Y-%m-%d'),)
                 )  
     matches = []
     for row in cur:
@@ -64,110 +63,110 @@ def main():
     alreadyParsed = alreadyParsed + parsedParts + errors
   
     for match in matches:
-        try:
-            for file in os.listdir("./working_demos_old/"):
-                os.remove("./working_demos_old/"+file)
+        for file in os.listdir("./working_demos/"):
+            os.remove("./working_demos/"+file)
 
-            demoid =  match[0]
-            matchid = match[1]
-            mapCount =  match[2]
-            date = match[3]
+        demoid =  match[0]
+        matchid = match[1]
+        mapCount =  match[2]
+        default  =  match[3]
+        
+        parse = False
+        for i in range(mapCount):
+            if str(matchid)+'-'+str(i+1) not in alreadyParsed:
+                parse = True
 
-            parse = False
-            for i in range(mapCount):
-                if str(matchid)+'-'+str(i+1) not in alreadyParsed:
-                    parse = True
 
+        if parse:
+            matchCounter += 1
+            demo_path = "./demos/"+str(demoid)+".rar" 
 
-            if parse:
-                matchCounter += 1
-                demo_path = "./demos/"+str(demoid)+".rar" 
+            if os.path.isfile(demo_path): 
+                try:
+                    patoolib.extract_archive(demo_path, outdir="./working_demos", verbosity=-1)
+                except patoolib.util.PatoolError:
+                    print(demoid + " extract error")
+                    continue
+                if(len(os.listdir("./working_demos")) == mapCount-int(default)):
 
-                if os.path.isfile(demo_path): 
-                    try:
-                        patoolib.extract_archive(demo_path, outdir="./working_demos_old", verbosity=-1)
-                    except patoolib.util.PatoolError:
-                        print(demoid + " extract error")
-                        continue
-                    if(len(os.listdir("./working_demos_old")) == mapCount):
-
-                        demoNames = os.listdir("./working_demos_old")
-                        path = './working_demos_old/'
-                        demoPaths = [os.path.join(path,i) for i in demoNames]
-                        copy = demoPaths.copy()
-                        if len(demoPaths) > 1:
+                    demoNames = os.listdir("./working_demos")
+                    path = './working_demos/'
+                    demoPaths = [os.path.join(path,i) for i in demoNames]
+                    copy = demoPaths.copy()
+                    if len(demoPaths) > 1:
+                        try:
+                            demoPaths = sorted(demoPaths , key=lambda x:int(x.split('-')[-2][-1]))
+                        except (ValueError, IndexError):
+                            demoPaths = copy.sort(key=os.path.getmtime)
+                            pass
+                        
+                        if demoPaths is None:
                             try:
-                                demoPaths = sorted(demoPaths , key=lambda x:int(x.split('-')[-2][-1]))
+                                demoPaths = sorted(copy , key=lambda x:int(x.split('/')[2].split('_')[0]))
                             except (ValueError, IndexError):
                                 demoPaths = copy.sort(key=os.path.getmtime)
                                 pass
-                            
-                            if demoPaths is None:
-                                try:
-                                    demoPaths = sorted(copy , key=lambda x:int(x.split('/')[2].split('_')[0]))
-                                except (ValueError, IndexError):
-                                    demoPaths = copy.sort(key=os.path.getmtime)
-                                    pass
-                            if demoPaths is None:
-                                demoPaths = copy
-                        mapNo = 1
-                        for demo in demoPaths:
+                        if demoPaths is None:
+                            demoPaths = copy
+                    
+                    mapNo = 1
+                    if default:
+                        mapNo = 2
+                    for demo in demoPaths:
+                        cur = conn.cursor()
+                        cur.execute("""SELECT winnerrounds+loserrounds from maps where mapid = %s""", (str(matchid)+'-'+str(mapNo),))
+                        rounds = cur.fetchone()[0]
+                        print("Current Match: " + str(matchid)+'-'+str(mapNo), end='\r')
+                        command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo) + " -roundsTotal " + str(rounds) 
+
+                        os.system(command)
+                        os.remove(demo)
+                        cleanLogs.main("./logs/Unclean/", str(matchid)+'-'+str(mapNo)+'.txt')
+                        mapNo += 1
+                else:
+                    #print(str(matchid) + ' has maps in Parts')
+                    demoNames = os.listdir("./working_demos")
+                    path = './working_demos/'
+                    demoPaths = [os.path.join(path,i) for i in demoNames]
+                    demoPaths = sorted(demoPaths , key=os.path.getctime)
+                    for demo in demoPaths:
+                        if '-m1-' in demo:
+                            mapNo = 1
+                        elif '-m2-' in demo:
+                            mapNo = 2
+                        elif '-m3-' in demo:
+                            mapNo = 3
+                        elif '-m4-' in demo:
+                            mapNo = 4
+                        elif '-m5-' in demo:
+                            mapNo = 5
+                        else:
+                            continue
+
+
+                        if '-p1.dem' in demo:
+                            fileName = 'Parts/'+str(matchid)+'-'+str(mapNo)
+                            print(str(matchid)+'-'+str(mapNo) + ' is in Parts')
+                        else:
+                            fileName = 'Parts/'+str(matchid)+'-'+str(mapNo)
+
+                        try:
+
                             cur = conn.cursor()
                             cur.execute("""SELECT winnerrounds+loserrounds from maps where mapid = %s""", (str(matchid)+'-'+str(mapNo),))
                             rounds = cur.fetchone()[0]
-
-                            cur.execute("""SELECT * from roundstates where mapid = %s and round = 1 and tick = 0""", (str(matchid)+'-'+str(mapNo),))
-                            rsOne = cur.fetchone()
-                            if rsOne is None:
-                                if date == 1:
-                                    command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 1" + " -roundsTotal " + str(rounds) 
-                                
-                                else:
-                                    command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + str(matchid)+'-'+str(mapNo)+ " -rs 0" + " -roundsTotal " + str(rounds) 
-
-                                os.system(command)
-                                os.remove(demo)
-                                cleanLogs.main("./logs/Unclean/", str(matchid)+'-'+str(mapNo)+'.txt')
-                            mapNo += 1
-                    else:
-                        #print(str(matchid) + ' has maps in Parts')
-                        demoNames = os.listdir("./working_demos_old")
-                        path = './working_demos_old/'
-                        demoPaths = [os.path.join(path,i) for i in demoNames]
-                        demoPaths = sorted(demoPaths , key=os.path.getctime)
-                        mapNo = 0
-                        for demo in demoPaths:
-                            if '-p1.dem' in demo:
-                                mapNo += 1
-                                fileName = str(matchid)+'-'+str(mapNo)+'.1'
-                                print(str(matchid)+'-'+str(mapNo) + ' is in Parts')
-                            elif '-p2.dem' in demo:
-                                if mapNo == 0:
-                                    mapNo += 1
-                                fileName = str(matchid)+'-'+str(mapNo)+'.2'
-                            elif '-p3.dem' in demo:
-                                if mapNo == 0:
-                                    mapNo += 1
-                                fileName = str(matchid)+'-'+str(mapNo)+'.3'
-                            else:
-                                mapNo += 1
-                                fileName = str(matchid)+'-'+str(mapNo)
-                            if date == 1:
-                                try:
-                                    cur = conn.cursor()
-                                    cur.execute("""SELECT winnerrounds+loserrounds from maps where mapid = %s""", (str(matchid)+'-'+str(mapNo),))
-                                    rounds = cur.fetchone()[0]
-                                    command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + fileName+ " -rs 1" + " -roundsTotal " + str(rounds) 
-                                except:
-                                    print("Non standard demo parts")
-                                    continue
+                            print("Current Match: " + str(matchid)+'-'+str(mapNo), end='\r')
+                            command = 'go run "./demoScraper.go" -demo '+ demo + " -filename " + fileName + " -roundsTotal " + str(rounds) 
                             os.system(command)
-                            os.remove(demo)
-        except Exception as e:
-            print(e)
-            continue               
+                        except:
+                            print("Non standard demo parts")
+                            continue
+                        
+                        os.remove(demo)
+                        cleanLogs.main("./logs/Unclean/Parts/", str(matchid)+'-'+str(mapNo)+'.txt')
     print(str(matchCounter) + " Matches Parsed. ", end='\r')
                         
 if __name__ == "__main__":
     main()
+    
     
