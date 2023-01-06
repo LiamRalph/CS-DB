@@ -336,7 +336,7 @@ def createDB():
                         attacker INT,
                         victim INT,
                         damage INT,
-                        PRIMARY KEY (mapid, round, tick, attacker, victim),
+                        PRIMARY KEY (mapid, round, tick),
                         CONSTRAINT maps_rounds_fk
                             FOREIGN KEY(mapid, round) 
                                 REFERENCES rounds(mapid, round)

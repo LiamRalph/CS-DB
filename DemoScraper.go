@@ -34,7 +34,7 @@ func main() {
 	// if strings.Contains(FileName, ".2") {
 	// 	FileName = "Parts/" + FileName
 	// }
-	outputFile, err := os.OpenFile("./logs/Unclean/"+FileName+".txt", os.O_WRONLY|os.O_CREATE, 0666)
+	outputFile, err := os.Create("./logs/Unclean/" + FileName + ".txt")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -251,7 +251,7 @@ func main() {
 	p.RegisterEventHandler(func(e events.Footstep) {
 		gs := p.GameState()
 
-		if footstepCount == 8 {
+		if footstepCount == 12 {
 			WinProb(gs, roundStartTick, BombPlanted, TimePlanted, outputFile, site, BombDefused, END_ROUND, siteA, siteB, "None", "None", 0)
 			footstepCount = 0
 		} else {
@@ -279,18 +279,17 @@ func main() {
 			var tAlive int = 0
 			var ctValue int = 0
 			var tValue int = 0
-			if tSize == 5 && ctSize == 5 {
-				for i := 0; i < 5; i++ {
-					tValue += tRoster[i].EquipmentValueFreezeTimeEnd()
-					if tRoster[i].IsAlive() {
-						tAlive += 1
+			for i := 0; i < tSize; i++ {
+				tValue += tRoster[i].EquipmentValueFreezeTimeEnd()
+				if tRoster[i].IsAlive() {
+					tAlive += 1
+				}
 
-					}
-					ctValue += ctRoster[i].EquipmentValueFreezeTimeEnd()
-					if ctRoster[i].IsAlive() {
-						ctAlive += 1
-
-					}
+			}
+			for i := 0; i < ctSize; i++ {
+				ctValue += ctRoster[i].EquipmentValueFreezeTimeEnd()
+				if ctRoster[i].IsAlive() {
+					ctAlive += 1
 				}
 			}
 			if roundNo == 1 || roundNo == 16 {
@@ -376,18 +375,17 @@ func main() {
 		var tAlive int = 0
 		var ctValue int = 0
 		var tValue int = 0
-		if tSize == 5 && ctSize == 5 {
-			for i := 0; i < 5; i++ {
-				tValue += tRoster[i].EquipmentValueFreezeTimeEnd()
-				if tRoster[i].IsAlive() {
-					tAlive += 1
+		for i := 0; i < tSize; i++ {
+			tValue += tRoster[i].EquipmentValueFreezeTimeEnd()
+			if tRoster[i].IsAlive() {
+				tAlive += 1
+			}
 
-				}
-				ctValue += ctRoster[i].EquipmentValueFreezeTimeEnd()
-				if ctRoster[i].IsAlive() {
-					ctAlive += 1
-
-				}
+		}
+		for i := 0; i < ctSize; i++ {
+			ctValue += ctRoster[i].EquipmentValueFreezeTimeEnd()
+			if ctRoster[i].IsAlive() {
+				ctAlive += 1
 			}
 		}
 		if roundNo == 1 || roundNo == 16 {
@@ -397,6 +395,10 @@ func main() {
 			tValueEnd = 0
 			ctStreak = 1
 			tStreak = 1
+		}
+		if roundNo > 30 && roundNo%3 == 1 {
+			ctValueEnd = 0
+			tValueEnd = 0
 		}
 		switch Winner {
 		case common.TeamTerrorists:
@@ -499,18 +501,20 @@ func main() {
 		tMoney = 0
 		ctValueEnd = 0
 		tValueEnd = 0
-		if tSize == 5 && ctSize == 5 {
-			for i := 0; i < 5; i++ {
-				ctMoney += ctRoster[i].Money() //+ (1400 + (ctStreak * 500))
-				tMoney += tRoster[i].Money()   //+ (1400 + (tStreak * 500))
-				if tRoster[i].IsAlive() {
-					tValueEnd += tRoster[i].EquipmentValueCurrent()
-				}
-				if ctRoster[i].IsAlive() {
-					ctValueEnd += ctRoster[i].EquipmentValueCurrent()
-				}
+		for i := 0; i < tSize; i++ {
+			tMoney += tRoster[i].Money() //+ (1400 + (tStreak * 500))
+			if tRoster[i].IsAlive() {
+				tValueEnd += tRoster[i].EquipmentValueCurrent()
+			}
+
+		}
+		for i := 0; i < ctSize; i++ {
+			ctMoney += ctRoster[i].Money() //+ (1400 + (ctStreak * 500))
+			if ctRoster[i].IsAlive() {
+				ctValueEnd += ctRoster[i].EquipmentValueCurrent()
 			}
 		}
+
 	})
 	// Parse to end
 	err = p.ParseToEnd()

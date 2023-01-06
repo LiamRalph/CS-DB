@@ -11,7 +11,7 @@ import psycopg2, psycopg2.extras
 import shutil
 import re
 import cleanLogs
-def main(odd):
+def main(odd, monthsBack):
     #Init Variables
     errors = []
     for file in os.listdir("./logs/Cleaned/Error/Kill"):
@@ -28,15 +28,14 @@ def main(odd):
     cur.execute("""
                 SELECT demoid, Match.matchid, count(Map) as mapCount, count(Map) filter (where Map.mapname = 'Default' or Map.mapname = 'TBA') from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
-                where Match.matchid %% 2 = %s
+                where (Match.matchid %% 2)::text = any(%s) and match.date > CURRENT_DATE - (INTERVAL '%s Month')
                 GROUP BY demoid, Match.matchid
-                ORDER BY date DESC """, (odd,))  
-    #, (datetime.today().strftime('%Y-%m-%d'),)
+                ORDER BY date DESC """, (odd, monthsBack)) 
     matches = []
     for row in cur:
         matches.append(row)
     cur.close()
-    if odd > 0:
+    if odd == '1':
         odd = '_odd'
     else:
         odd = ''
@@ -170,7 +169,8 @@ def main(odd):
     print(str(matchCounter) + " Matches Parsed. ", end='\r')
                         
 if __name__ == "__main__":
-    odd = int(sys.argv[1])
-    main(odd)
+    odd = list(sys.argv[1].split(','))
+    monthsBack = int(sys.argv[2])
+    main(odd, monthsBack)
     
     

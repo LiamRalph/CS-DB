@@ -21,13 +21,16 @@ def main():
 
 
     while True:
+        oldLinks = []
         try:
             getAlreadyDownloaded(alreadyDownloadedIDs)
 
             demoLinks = getDemoLinks(alreadyDownloadedIDs)
             if demoLinks:
                 downloadDemos(demoLinks, alreadyDownloadedIDs)
-            DemoParser.main()
+            if oldLinks != demoLinks:
+                DemoParser.main(['0','1'], 1)
+            oldLinks = demoLinks
             time.sleep(150)
         except Exception as e:
             print(e)

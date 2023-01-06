@@ -259,7 +259,8 @@ def main(path, mapID):
                             else:
                                 line["T"] = line["Winner"]
                                 line["CT"] = line["Loser"]
-
+                            if line["Winner"] == line["Loser"]:
+                                return
                             columns = line.keys()
                             values = [line[column] for column in columns]
                             while True:
@@ -269,7 +270,7 @@ def main(path, mapID):
                                 except (psycopg2.errors.ForeignKeyViolation, psycopg2.errors.InFailedSqlTransaction) as e:
                                     print(e)
                                     conn.rollback()
-                                    break
+                                    return
                                 except psycopg2.OperationalError:
                                     time.sleep(60)
                                     print("Internet Timeout")
