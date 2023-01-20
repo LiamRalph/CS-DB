@@ -28,7 +28,8 @@ def getMapsParsed(hist):
         where Ma.winnerrounds > 15 and m.date > %s::date
         order by m.matchid asc
         """, (hist,))
-    return cur.fetchall()
+    ret = [x[0] for x in cur.fetchall()]
+    return ret
 def getMaps(hist):
     cur = conn.cursor()
     cur.execute("""
@@ -39,6 +40,7 @@ def getMaps(hist):
         where Ma.winnerrounds > 15 and m.date > %s::date
         order by ma.matchid desc
         """, (hist,))
+    
     return cur.fetchall()
 
 
@@ -55,11 +57,10 @@ def main(hist):
 
     alreadyParsed = getMapsParsed(hist)
     allMaps = getMaps(hist)
-
     for Map in allMaps:
         if Map[0] not in alreadyParsed:
             unparsedMapIDs.append(Map)
-    print(str(len(unparsedMapIDs)) + "Maps to Parse")
+    print(str(len(unparsedMapIDs)) + " Maps to Parse")
     for Map in unparsedMapIDs:
         for roundNo in reversed(range(1, Map[1])):
             RoundPreds = RoundPredictor.predict(RoundModel, Map[0], roundNo, 1)

@@ -21,7 +21,7 @@ def predict(XGB, mapid, roundNo, addDB):
     allMaps = RoundQueries.getMapNames()
     roundstates = RoundQueries.getData(mapid, roundNo)
     dfList = []
-    if isinstance(dfList, int):
+    if isinstance(roundstates, int):
         return -1
     for roundstate in roundstates:
         for mapname in allMaps:

@@ -164,11 +164,11 @@ def addPred(preds):
         cur.execute("""
                     insert into kill_prob (mapid, round, tick, kill, death, prob)
                     values 
-                    ON CONFLICT DO NOTHING
                     """ + (args_str))
         conn.commit()
-    except Exception as E:
-        print(E)
+    except Exception as e:
+        if not isinstance(e, psycopg2.errors.UniqueViolation):
+            print(e)
         #print(pred[0], pred[1], pred[2], pred[3], pred[4])
         cur.execute('rollback to save_1;');
     
