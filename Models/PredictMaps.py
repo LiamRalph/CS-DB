@@ -22,8 +22,8 @@ def getMapsParsed(hist):
         inner join rounds R on R.mapid = Ma.mapid and R.round = 1
         inner join roundstates RS on RS.mapid = Ma.mapid and RS.round = 1 and RS.tick = 0
         inner join kills K on K.mapid = Ma.mapid and K.round = 1 and K.teammembersalive = 5 and K.opponentsalive = 5
-        inner join kill_prob KP on KP.mapid = Ma.mapid and KP.round = R.round
-		inner join map_prob MP on MP.mapid = Ma.mapid and MP.round = R.round
+        inner join kill_prob KP on KP.mapid = Ma.mapid and KP.round = R.round and k.tick = KP.tick
+		inner join map_prob MP on MP.mapid = Ma.mapid and MP.round = R.round and MP.tick = K.tick
 		inner join rs_prob RP on RP.mapid = Ma.mapid and RP.round = R.round and RP.tick = K.tick
         where Ma.winnerrounds > 15 and m.date > %s::date
         order by m.matchid asc

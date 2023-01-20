@@ -164,6 +164,7 @@ def addPred(preds):
         cur.execute("""
                     insert into kill_prob (mapid, round, tick, kill, death, prob)
                     values 
+                    ON CONFLICT DO NOTHING
                     """ + (args_str))
         conn.commit()
     except Exception as E:
