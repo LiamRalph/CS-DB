@@ -19,7 +19,7 @@ def getMapData(mapid,roundNo):
                 inner join maps M on M.mapid = RS.mapid
                 inner join rounds R on R.mapid = RS.mapid and R.round = RS.round 
                 inner join matches Ma on Ma.matchid = M.matchid
-                where M.mapid = %s and R.round = %s and M.winnerrounds > 15 and (rs.tick = 0 or rs.damage > 0 or rs.tick %% 3 != 2)
+                where M.mapid = %s and R.round = %s and M.winnerrounds > 15 and (rs.tick = 0 or rs.damage > 0 or rs.tick %% 2 != 1)
                 order by R.round ASC
                 """, (mapid,roundNo))
     matches = cur.fetchall()

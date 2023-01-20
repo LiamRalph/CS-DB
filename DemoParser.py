@@ -28,7 +28,7 @@ def main(odd, monthsBack):
     cur.execute("""
                 SELECT demoid, Match.matchid, count(Map) as mapCount, count(Map) filter (where Map.mapname = 'Default' or Map.mapname = 'TBA') from matches Match
                     INNER JOIN maps Map ON Map.matchid = Match.matchid
-                where (Match.matchid %% 2)::text = any(%s) and match.date > CURRENT_DATE - (INTERVAL '%s Month')
+                where (Match.matchid %% 2) = any(%s) and match.date > CURRENT_DATE - (INTERVAL '%s Month')
                 GROUP BY demoid, Match.matchid
                 ORDER BY date DESC """, (odd, monthsBack)) 
     matches = []
@@ -87,7 +87,7 @@ def main(odd, monthsBack):
                 try:
                     patoolib.extract_archive(demo_path, outdir="./working_demos"+odd+"/", verbosity=-1)
                 except patoolib.util.PatoolError:
-                    print(demoid + " extract error")
+                    print(str(demoid) + " extract error")
                     continue
                 if(len(os.listdir("./working_demos"+odd+"/")) == mapCount-int(default)):
 

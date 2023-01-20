@@ -96,12 +96,12 @@ if reBackTest == 0:
     counter = 0
     for mapid in mapids:
         counter += 1
-        Rounds = Preds.loc[Preds['mapid'] == mapid].sort_values(by=['roundno'], ascending=False)
+        Rounds = Preds.loc[Preds['mapid'] == mapid].sort_values(by=['roundno', 'tick'], ascending=False)
         prevProb = Preds.iloc[0]['winner']
         preds = []
         for k, RoundNo in Rounds.iterrows():
             probchangeCT = prevProb-RoundNo['prediction']
-            preds.append((mapid, RoundNo['roundno'], RoundNo['prediction'], probchangeCT))
+            preds.append((mapid, RoundNo['roundno'], RoundNo['tick'], RoundNo['prediction'], probchangeCT))
             prevProb = RoundNo['prediction']
         print("Matches Tried " + str(counter) + "/"+ str(len(mapids)), end ="\r")
         MapQueries.addPred(preds)

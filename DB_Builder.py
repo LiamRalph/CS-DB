@@ -261,10 +261,10 @@ def createDB():
                     CREATE TABLE kill_prob (
                         mapid TEXT,
                         round INT,
+                        tick INT,
                         kill INT,
                         death INT,
                         prob float,
-                        roundProbChange float,
                         PRIMARY KEY (mapid,round,kill,death)
                     )
                     """)
@@ -306,9 +306,10 @@ def createDB():
                     CREATE TABLE map_prob (
                         mapid TEXT,
                         round INT,
+                        tick INT,
                         probCT float,
                         probChangeCT float,
-                        PRIMARY KEY (mapid,round)
+                        PRIMARY KEY (mapid,round,tick)
                     )
                     """)
             cur.execute(command)

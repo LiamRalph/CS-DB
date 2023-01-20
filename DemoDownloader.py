@@ -13,9 +13,8 @@ import DemoParser
 
 
 def main():
-    global IP, URL
-    IP = '192.168.1.3'
-    IP = 'csgo.cqtpbfnejnsi.us-east-2.rds.amazonaws.com'
+    global URL
+
     URL = 'https://www.hltv.org/download/demo/'
     alreadyDownloadedIDs = []
 

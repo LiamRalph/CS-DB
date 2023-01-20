@@ -5,6 +5,9 @@ import psycopg2.extras
 import warnings
 warnings.filterwarnings('ignore', category=FutureWarning)
 from datetime import datetime
+import math
+
+
 
 import connectDB
 conn = connectDB.database_credentials()
@@ -15,21 +18,24 @@ def getMapData(mapid):
                 select Map.mapname as mapname, CASE WHEN Map.winnerstart='ct' THEN 1 ELSE 0 END as winner, 
                 r.winner as winnerid, r1.ct as ctstart,  
                 CASE WHEN R.ct = r1.ct THEN 1 ELSE 0 END as ct,  
-                r.round as RoundNo, r.winnerscore-1 as winnerscore, r.loserscore,
-				CASE WHEN (r.round > 30 and r.round%%3 = 1) then 80000 else r.winnermoney end as winnermoney,r.winnerstreak,
-				CASE WHEN (r.round > 30 and r.round%%3 = 1) then 80000 else r.losermoney end as losermoney,r.loserstreak
-                --,CASE WHEN R.ct = r1.ct THEN rp.probct ELSE 1-rp.probct END as ctRP
+                r.round as RoundNo, rp.tick, r.winnerscore-1 as winnerscore, r.loserscore
+                ,least(CASE WHEN (r.round > 30 and r.round%%3 = 1) then 80000 else r.winnermoney end, 80000) as winnermoney
+                --,r.winnerstreak
+                ,least(CASE WHEN (r.round > 30 and r.round%%3 = 1) then 80000 else r.losermoney end, 80000) as losermoney
+                --,r.loserstreak
+                ,CASE WHEN R.ct = r1.ct THEN rp.probct ELSE 1-rp.probct END as ctRP
                 
                 from maps Map
                 
                 inner join rounds r on r.mapid = Map.mapid 
                 inner join rounds r1 on r1.mapid = Map.mapid and r1.round = 1
-                inner join rs_prob rp on rp.mapid = Map.mapid and r.round = rp.round and rp.tick = 0
+                inner join rs_prob rp on rp.mapid = Map.mapid and r.round = rp.round and (rp.probchangect > 0 or rp.tick = 0)
+				
                 where Map.mapid = %s  and Map.winnerrounds > 15
                 order by r.round ASC 
                 """, (mapid,))
     matches = cur.fetchall()
-#least(r.winnermoney+r.winnersaved, 80000) as winnerecon, least(r.losermoney+r.losersaved, 80000) as loserecon,
+
     if len(matches) > 0:
         return matches
     else:
@@ -38,14 +44,14 @@ def getMapData(mapid):
 
 def getData(mapid):
     allMaps = getMapNames()
-    deletekeys = ['winnerid', 'ctstart', 'mapname']
+    deletekeys = ['winnerid', 'ctstart', 'mapname'] #, 'ctstart_score', 'tstart_score'
     ret = []
     mapData = getMapData(mapid)
     if isinstance(mapData, int):
         return -1
     for roundNo in mapData:
 
-        roundData = dict.fromkeys(['ctstart_score', 'tstart_score','ct_mapPoints', 't_mapPoints', 'ot'])
+        roundData = {}
         roundData['mapid'] = mapid
         for mapname in allMaps:
             if mapname == roundNo["mapname"]:
@@ -77,35 +83,47 @@ def getData(mapid):
             ctWinRound = False
         
 
+        
+
+        # ctscore = int(roundData['ctstart_score'])
+        # tscore = int(roundData['tstart_score'])
+        # if roundData['roundno'] > 30:
+        #     if ctscore%3 == 0 and ctscore>tscore:
+        #         roundData['ct_mapPoint']  = 1#ctscore-tscore
+        #     else:
+        #         roundData['ct_mapPoint']  = 0
+        #     if tscore%3 == 0 and tscore>ctscore:
+        #         roundData['t_mapPoint'] = 1#tscore-ctscore
+        #     else:
+        #         roundData['t_mapPoint']  = 0
+        #     #winScore = ((math.floor(roundData['roundno']/6)*6)/2) + 4
+        #     # roundData['ct_RoundsLeft'] = winScore-ctscore
+        #     # roundData['t_RoundsLeft'] = winScore-tscore
+        #     roundData['ot'] = 1
+        # else:
+        #     if ctscore == 15 and tscore != 15:
+        #         roundData['ct_mapPoint']  = 1#ctscore-tscore
+        #     else:
+        #         roundData['ct_mapPoint']  = 0
+        #     if tscore == 15 and ctscore != 15:
+        #         roundData['t_mapPoint'] = 1#tscore-ctscore
+        #     else:
+        #         roundData['t_mapPoint']  = 0
+
+        #     # if roundData['roundno'] != 30:
+        #     #     roundData['ct_RoundsLeft'] = 16-ctscore
+        #     #     roundData['t_RoundsLeft'] = 16-tscore
+        #     # else:
+        #     #     if ctscore>tscore:
+        #     #         roundData['ct_RoundsLeft'] = 1
+        #     #         roundData['t_RoundsLeft'] = 0
+        #     #     else:
+        #     #         roundData['ct_RoundsLeft'] = 0
+        #     #         roundData['t_RoundsLeft'] = 1
+        #     roundData['ot'] = 0
+
         for delkey in deletekeys:
             del roundData[delkey]
-
-        ctscore = int(roundData['ctstart_score'])
-        tscore = int(roundData['tstart_score'])
-
-
-
-        if roundData['roundno'] > 30:
-            
-            if ctscore%3 == 0 and ctscore>tscore:
-                roundData['ct_mapPoints']  = ctscore-tscore
-            else:
-                roundData['ct_mapPoints']  = 0
-            if tscore%3 == 0 and tscore>ctscore:
-                roundData['t_mapPoints'] = tscore-ctscore
-            else:
-                roundData['t_mapPoints']  = 0
-            roundData['ot'] = 1
-        else:
-            if ctscore == 15 and tscore != 15:
-                roundData['ct_mapPoints']  = ctscore-tscore
-            else:
-                roundData['ct_mapPoints']  = 0
-            if tscore == 15 and ctscore != 15:
-                roundData['t_mapPoints'] = tscore-ctscore
-            else:
-                roundData['t_mapPoints']  = 0
-            roundData['ot'] = 0
         ret.append(roundData.copy())
         
         
@@ -130,7 +148,6 @@ def getMatches():
         inner join rounds R on R.mapid = Ma.mapid and R.round = 1
         inner join roundstates RS on RS.mapid = Ma.mapid and RS.round = 1 and RS.tick = 0
         inner join rs_prob rp on rp.mapid = Ma.mapid and rp.round = 1 and rp.tick = 0
-        where m.date < '2023-01-01'
         order by m.matchid asc
         """)
     return cur.fetchall()
@@ -175,9 +192,9 @@ def addPred(preds):
     try:
         cur = conn.cursor()
         cur.execute('savepoint save_1;');
-        args_str = ','.join(cur.mogrify("(%s,%s,%s,%s)", x).decode('utf-8') for x in preds)
+        args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s)", x).decode('utf-8') for x in preds)
         cur.execute("""
-                    insert into map_prob (mapid, round, probct, probchangect)
+                    insert into map_prob (mapid, round, tick, probct, probchangect)
                     values 
                     """ + (args_str))
         conn.commit()
@@ -199,9 +216,10 @@ def resetTable():
                     CREATE TABLE map_prob (
                         mapid TEXT,
                         round INT,
+                        tick INT,
                         probCT float,
                         probChangeCT float,
-                        PRIMARY KEY (mapid,round)
+                        PRIMARY KEY (mapid,round,tick)
                     )
                     """)
     cur.execute(command)
