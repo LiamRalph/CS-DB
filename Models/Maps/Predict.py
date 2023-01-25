@@ -18,7 +18,6 @@ def predict(XGB, mapid, addDB):
     #print(XGB.get_booster().feature_names)
     dfList = MapQueries.getData(mapid)
     if isinstance(dfList, int):
-        print(mapid)
         return -1
     df = pd.DataFrame(dfList)
     
@@ -27,7 +26,7 @@ def predict(XGB, mapid, addDB):
     #print(df.columns)
     predictions = XGB.predict_proba(df)
     df['winner'] = winner
-    predictions = [value[0] for value in predictions]
+    predictions = [value[1] for value in predictions]
     df['prediction'] = predictions
     if addDB == 0:
         pd.DataFrame.to_csv(df, './data/Prediction.csv', index=False)

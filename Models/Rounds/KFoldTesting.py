@@ -3,7 +3,7 @@ import pandas as pd
 from xgboost import XGBClassifier
 import csv
 def KFold(splitCount):
-    df =  pd.read_csv('./data/Rounds.csv', dtype={'ctalive':int,'talive':int,'roundno':int,'Vertigo':int,'Ancient':int,'Cobblestone':int,'Inferno':int,'Tuscan':int,'Mirage':int,'Anubis':int,'Train':int,'Overpass':int,'Dust2':int,'Cache':int,'Nuke':int})
+    df =  pd.read_csv('./data/Rounds.csv', dtype={'ctalive':np.int8,'talive':np.int8,'roundno':np.int8,'Vertigo':np.int8,'Ancient':np.int8,'Cobblestone':np.int8,'Inferno':np.int8,'Tuscan':np.int8,'Mirage':np.int8,'Anubis':np.int8,'Train':np.int8,'Overpass':np.int8,'Dust2':np.int8,'Cache':np.int8,'Nuke':np.int8, 'plantedA':np.int8, 'plantedB':np.int8})
     splits = np.array_split(df, splitCount)
     del df
     splitNo = 0

@@ -28,9 +28,9 @@ def main():
             if demoLinks:
                 downloadDemos(demoLinks, alreadyDownloadedIDs)
             if oldLinks != demoLinks:
-                DemoParser.main(['0','1'], 1)
+                DemoParser.main([0,1], 1)
             oldLinks = demoLinks
-            time.sleep(150)
+            time.sleep(300)
         except Exception as e:
             print(e)
             time.sleep(300)

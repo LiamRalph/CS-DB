@@ -44,7 +44,7 @@ if loadCSV == 0:
         if mapid in mapIDsLoaded:
             continue
         mapIDsLoaded.append(mapid)
-        for roundNo in range(1, match[6]):
+        for roundNo in range(1, match[6]+1):
             rounds = RoundQueries.getData(mapid,roundNo)
             if isinstance(rounds, int):
                 continue

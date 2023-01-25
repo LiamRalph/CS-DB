@@ -19,7 +19,7 @@ def getMapData(mapid,roundNo):
                 inner join maps M on M.mapid = RS.mapid
                 inner join rounds R on R.mapid = RS.mapid and R.round = RS.round 
                 inner join matches Ma on Ma.matchid = M.matchid
-                where M.mapid = %s and R.round = %s and M.winnerrounds > 15 and (rs.tick = 0 or rs.damage > 0 or rs.tick %% 2 != 1)
+                where M.mapid = %s and R.round = %s and M.winnerrounds > 15 and (rs.tick = 0 or rs.damage > 0 or rs.tick %% 3 = 0)
                 order by R.round ASC
                 """, (mapid,roundNo))
     matches = cur.fetchall()
@@ -58,7 +58,7 @@ def getMatches():
         inner join maps Ma on Ma.matchid = m.matchid 
         inner join rounds R on R.mapid = Ma.mapid and R.round = 1
         inner join roundstates RS on RS.mapid = Ma.mapid and RS.round = 1 and RS.tick = 0
-        where m.date < '2023-01-01' and m.date > '2018-01-01'
+        where m.date < '2022-01-01'
         order by m.matchid asc
         """)
     return cur.fetchall()
@@ -103,7 +103,6 @@ def addPred(preds):
 
     try:
         cur = conn.cursor()
-        cur.execute('savepoint save_1;');
         args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s)", x).decode('utf-8') for x in preds)
         cur.execute("""
                     insert into rs_prob (mapid, round, tick, probct, probchangect)
@@ -114,11 +113,10 @@ def addPred(preds):
         if not isinstance(e, psycopg2.errors.UniqueViolation):
             print(e)
         #print(pred[0], pred[1], pred[2], pred[3], pred[4])
-        cur.execute('rollback to save_1;');
+        conn.rollback()
 
             
 
-    conn.commit()
 
 def resetTable():
     cur = conn.cursor()

@@ -80,7 +80,7 @@ if loadCSV == 0:
         dict_writer.writerows(dfList)
     print()
 del dfList
-df =  pd.read_csv('./data/Rounds.csv')
+df =  pd.read_csv('./data/Rounds.csv', dtype={'ctstart_score':int,'tstart_score':int,'ctstart_streak':int,'tstart_streak':int,'Vertigo':int,'Ancient':int,'Cobblestone':int,'Inferno':int,'Tuscan':int,'Mirage':int,'Anubis':int,'Train':int,'Overpass':int,'Dust2':int,'Cache':int,'Nuke':int})
 
 
 

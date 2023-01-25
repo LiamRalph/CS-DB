@@ -170,6 +170,7 @@ def main(odd, monthsBack):
                         
 if __name__ == "__main__":
     odd = list(sys.argv[1].split(','))
+    odd = [int(x) for x in odd]
     monthsBack = int(sys.argv[2])
     main(odd, monthsBack)
     

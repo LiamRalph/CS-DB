@@ -159,7 +159,6 @@ def getWeaponNames():
 def addPred(preds):
     try:
         cur = conn.cursor()
-        cur.execute('savepoint save_1;');
         args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s)", x).decode('utf-8') for x in preds)
         cur.execute("""
                     insert into kill_prob (mapid, round, tick, kill, death, prob)
@@ -170,7 +169,7 @@ def addPred(preds):
         if not isinstance(e, psycopg2.errors.UniqueViolation):
             print(e)
         #print(pred[0], pred[1], pred[2], pred[3], pred[4])
-        cur.execute('rollback to save_1;');
+        conn.rollback()
     
 
 def resetTable():

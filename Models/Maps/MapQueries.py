@@ -19,18 +19,18 @@ def getMapData(mapid):
                 r.winner as winnerid, r1.ct as ctstart,  
                 CASE WHEN R.ct = r1.ct THEN 1 ELSE 0 END as ct,  
                 r.round as RoundNo, rp.tick, r.winnerscore-1 as winnerscore, r.loserscore
-                ,least(CASE WHEN (r.round > 30 and r.round%%3 = 1) then 80000 else r.winnermoney end, 80000) as winnermoney
-                --,r.winnerstreak
-                ,least(CASE WHEN (r.round > 30 and r.round%%3 = 1) then 80000 else r.losermoney end, 80000) as losermoney
-                --,r.loserstreak
-                ,CASE WHEN R.ct = r1.ct THEN rp.probct ELSE 1-rp.probct END as ctRP
+                --,least(CASE WHEN (r.round > 30 and r.round%%3 = 1) then 80000 else r.winnermoney end, 80000) as winnermoney
+                ,r.winnerstreak
+                --,least(CASE WHEN (r.round > 30 and r.round%%3 = 1) then 80000 else r.losermoney end, 80000) as losermoney
+                ,r.loserstreak
+                ,CASE WHEN R.ct = r1.ct THEN rp.probct ELSE 1-rp.probct END as ctRP, mat.date as date
                 
                 from maps Map
                 
                 inner join rounds r on r.mapid = Map.mapid 
                 inner join rounds r1 on r1.mapid = Map.mapid and r1.round = 1
-                inner join rs_prob rp on rp.mapid = Map.mapid and r.round = rp.round and (rp.probchangect > 0 or rp.tick = 0)
-				
+                inner join rs_prob rp on rp.mapid = Map.mapid and r.round = rp.round and (abs(rp.probchangect) > 0.01 or rp.tick = 0)
+				inner join matches mat on mat.matchid = map.matchid
                 where Map.mapid = %s  and Map.winnerrounds > 15
                 order by r.round ASC 
                 """, (mapid,))
@@ -44,21 +44,24 @@ def getMapData(mapid):
 
 def getData(mapid):
     allMaps = getMapNames()
-    deletekeys = ['winnerid', 'ctstart', 'mapname'] #, 'ctstart_score', 'tstart_score'
+    
+    deletekeys = ['winnerid', 'ctstart', 'mapname', 'date'] #, 'ctstart_score', 'tstart_score'
     ret = []
     mapData = getMapData(mapid)
+    
     if isinstance(mapData, int):
         return -1
+    #ctWR = getCTWR(mapData[0]['mapname'], mapData[0]['date'])
     for roundNo in mapData:
 
-        roundData = {}
+        roundData = dict.fromkeys(['ct','roundno','tick','ctstart_score','tstart_score','ctstart_streak','tstart_streak','ctrp','ct_mapPoint','t_mapPoint','ot','winner','Vertigo', 'Ancient', 'Cobblestone', 'Inferno', 'Tuscan', 'Mirage', 'Anubis', 'Train', 'Overpass', 'Dust2', 'Cache', 'Nuke'])
         roundData['mapid'] = mapid
         for mapname in allMaps:
             if mapname == roundNo["mapname"]:
                 roundData[mapname] = 1
             else:
                 roundData[mapname] = 0
-
+        #roundData['ctWR'] = ctWR
         if roundNo['winnerid'] == roundNo['ctstart']:
             for key in roundNo.keys():
                 if 'winner' in key and key not in deletekeys and key != 'winner':
@@ -85,31 +88,31 @@ def getData(mapid):
 
         
 
-        # ctscore = int(roundData['ctstart_score'])
-        # tscore = int(roundData['tstart_score'])
-        # if roundData['roundno'] > 30:
-        #     if ctscore%3 == 0 and ctscore>tscore:
-        #         roundData['ct_mapPoint']  = 1#ctscore-tscore
-        #     else:
-        #         roundData['ct_mapPoint']  = 0
-        #     if tscore%3 == 0 and tscore>ctscore:
-        #         roundData['t_mapPoint'] = 1#tscore-ctscore
-        #     else:
-        #         roundData['t_mapPoint']  = 0
-        #     #winScore = ((math.floor(roundData['roundno']/6)*6)/2) + 4
-        #     # roundData['ct_RoundsLeft'] = winScore-ctscore
-        #     # roundData['t_RoundsLeft'] = winScore-tscore
-        #     roundData['ot'] = 1
-        # else:
-        #     if ctscore == 15 and tscore != 15:
-        #         roundData['ct_mapPoint']  = 1#ctscore-tscore
-        #     else:
-        #         roundData['ct_mapPoint']  = 0
-        #     if tscore == 15 and ctscore != 15:
-        #         roundData['t_mapPoint'] = 1#tscore-ctscore
-        #     else:
-        #         roundData['t_mapPoint']  = 0
-
+        ctscore = int(roundData['ctstart_score'])
+        tscore = int(roundData['tstart_score'])
+        if roundData['roundno'] > 30:
+            if ctscore%3 == 0 and ctscore>tscore:
+                roundData['ct_mapPoint']  = ctscore-tscore
+            else:
+                roundData['ct_mapPoint']  = 0
+            if tscore%3 == 0 and tscore>ctscore:
+                roundData['t_mapPoint'] = tscore-ctscore
+            else:
+                roundData['t_mapPoint']  = 0
+            # winScore = ((math.floor(roundData['roundno']/6)*6)/2) + 4
+            # roundData['ct_RoundsLeft'] = winScore-ctscore
+            # roundData['t_RoundsLeft'] = winScore-tscore
+            roundData['ot'] = 1
+        else:
+            if ctscore == 15 and tscore != 15:
+                roundData['ct_mapPoint']  = ctscore-tscore
+            else:
+                roundData['ct_mapPoint']  = 0
+            if tscore == 15 and ctscore != 15:
+                roundData['t_mapPoint'] = tscore-ctscore
+            else:
+                roundData['t_mapPoint']  = 0
+            roundData['ot'] = 0
         #     # if roundData['roundno'] != 30:
         #     #     roundData['ct_RoundsLeft'] = 16-ctscore
         #     #     roundData['t_RoundsLeft'] = 16-tscore
@@ -188,10 +191,27 @@ def getMapNames():
     mapnames = [x[0] for x in results]
     return mapnames
 
+def getCTWR(mapname, date):
+    cur = conn.cursor()
+    cur.execute("""
+        select count(r.*) filter (where winnerside = 'ct')/count(r.*)::float from rounds r
+        inner join maps map on map.mapid = r.mapid
+        inner join matches mat on mat.matchid = map.matchid
+        where map.mapname = %s and mat.date < %s  and mat.date > (%s ::date - INTERVAL'6 MONTH')
+        having count(r.*) > 0
+        """, (mapname, date,date))
+    ret = cur.fetchall()
+    if len(ret) > 0:
+        return ret[0][0]
+    else:
+        return 0.5267
+
+
+
+
 def addPred(preds):
     try:
         cur = conn.cursor()
-        cur.execute('savepoint save_1;');
         args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s)", x).decode('utf-8') for x in preds)
         cur.execute("""
                     insert into map_prob (mapid, round, tick, probct, probchangect)
@@ -202,7 +222,7 @@ def addPred(preds):
         if not isinstance(e, psycopg2.errors.UniqueViolation):
             print(e)
         #print(pred[0], pred[1], pred[2], pred[3], pred[4])
-        cur.execute('rollback to save_1;');
+        conn.rollback()
     
 
 def resetTable():

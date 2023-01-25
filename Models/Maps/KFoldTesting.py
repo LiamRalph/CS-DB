@@ -33,7 +33,6 @@ def KFoldTesting(train, test):
     XGB = XGBClassifier()
     XGB.fit(train, Target)
     y_pred = XGB.predict_proba(test)
-    print(XGB.classes_)
     predictions = [value[1] for value in y_pred]
     test['prediction'] = predictions
     test['mapid'] = mapids
